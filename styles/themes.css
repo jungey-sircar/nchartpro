@@ -1,0 +1,570 @@
+/* ═══════════════════════════════════════════════════════════════
+   NChartPro Theme System
+   Apply via data-theme on <html>:
+     (no attribute) or data-theme="app-default"  → App Default
+     data-theme="dark"                            → Dark
+     data-theme="light"                           → Light
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Proportional scaling: S = viewport / 1920, clamped [0.5, 1.5]
+   --scale-factor is injected server-side on <html> from the
+   x-client-resolution cookie. Falls back to 1 (1920px baseline).
+   Setting root font-size here propagates the scale to every rem-based
+   value in the app without touching individual components. ── */
+html {
+  font-size: calc(16px * var(--scale-factor, 1));
+}
+
+/* ── App Default: velvet image + indigo glass ── */
+:root,
+[data-theme="app-default"] {
+  --page-bg-image: url('/backgrounds/velvet.jpg');
+  --page-bg-overlay: none;
+
+  /* Backgrounds */
+  --bg-base:     #0d0d0f;
+  --bg-elevated: #141417;
+  --bg-card:     rgba(26, 26, 31, 0.80);
+  --bg-hover:    #222228;
+  --bg-hero:     var(--page-bg-overlay);
+
+  /* Text — never pure #fff in dark; use these variables */
+  --text-primary:   #e8e8f0;   /* ~91% white — readable, not harsh */
+  --text-secondary: #b8b8cc;   /* ~72% white */
+  --text-muted:     #787896;   /* ~47% white */
+
+  /* Text ON filled surfaces (accent buttons, avatars, coloured badges) */
+  --color-on-dark:  rgba(255, 255, 255, 0.90);
+
+  /* Accent */
+  --accent:           #6366f1;
+  --accent-glow:      rgba(99, 102, 241, 0.22);
+  --accent-secondary: #4f51c7;
+
+  /* Borders */
+  --border:       #2a2a32;
+  --border-glass: rgba(42, 42, 50, 0.90);
+  --border-dash:  rgba(99, 102, 241, 0.30);
+
+  /* Glass */
+  --glass-blur:     18px;
+  --glass-bg:       rgba(13, 13, 15, 0.60);
+  --glass-bg-hover: rgba(20, 20, 23, 0.82);
+  --glass-border:   #2a2a32;
+
+  /* ── Semantic status / market colours ──────────────────────────
+     Use these instead of hardcoding #10b981 / #ef4444 / #f59e0b.
+     Calibrated for comfortable contrast on dark backgrounds —
+     higher lightness, lower saturation than the raw Tailwind 500s.
+  ───────────────────────────────────────────────────────────────── */
+  --color-up:      #34d399;   /* bullish / profit / success  (emerald-400) */
+  --color-down:    #f87171;   /* bearish / loss   / danger   (red-400)     */
+  --color-neutral: #fbbf24;   /* pending / caution/ warning  (amber-400)   */
+  --color-info:    #60a5fa;   /* live / active / info        (blue-400)    */
+  --color-purple:  #a78bfa;   /* special / IPO / highlights  (violet-400)  */
+
+  /* Semi-transparent tints — badge / chip backgrounds */
+  --bg-up:      rgba(52,  211, 153, 0.13);
+  --bg-down:    rgba(248, 113, 113, 0.13);
+  --bg-neutral: rgba(251, 191,  36, 0.13);
+  --bg-info:    rgba(96,  165, 250, 0.13);
+  --bg-purple:  rgba(167, 139, 250, 0.13);
+
+  /* Matrix */
+  --matrix-color:        rgba(99, 102, 241, 0.60);
+  --matrix-color-bright: rgba(200, 201, 255, 0.96);
+  --matrix-trail-alpha:  0.08;
+
+  /* Wordmark */
+  --wordmark-bg:
+    url('/backgrounds/velvet.jpg') center / cover no-repeat,
+    linear-gradient(118deg, #6366f1 0%, #4f51c7 22%, #818cf8 45%, #6366f1 85%);
+  --wordmark-bg-size: cover, 300% auto;
+
+  /* Heading gradient */
+  --gradient-text: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #4f51c7 100%);
+
+  /* Candle colors */
+  --candle-up:   rgba(52, 211, 153, 0.28);
+  --candle-down: rgba(248, 113, 113, 0.28);
+
+  /* Shadows */
+  --shadow-sm:   0 1px 4px rgba(0, 0, 0, 0.55);
+  --shadow-md:   0 4px 18px rgba(0, 0, 0, 0.65);
+  --shadow-lg:   0 8px 36px rgba(0, 0, 0, 0.75);
+  --shadow-glow: 0 0 32px rgba(99, 102, 241, 0.28);
+
+  /* Font scale */
+  --fs-xs:   0.75rem;
+  --fs-sm:   0.8125rem;
+  --fs-base: 1rem;
+  --fs-md:   1.0625rem;
+  --fs-lg:   1.25rem;
+  --fs-xl:   1.5rem;
+  --fs-2xl:  2rem;
+  --fs-3xl:  2.5rem;
+  --fs-4xl:  3.25rem;
+
+  /* More blur on bg image */
+  --bg-blur: 14px;
+
+  --theme-transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ── Dark (flat indigo dark) ── */
+[data-theme="dark"] {
+  --page-bg-image: none;
+  --page-bg-overlay: #0d0d0f;
+
+  --bg-base:     #0d0d0f;
+  --bg-elevated: #141417;
+  --bg-card:     #1a1a1f;
+  --bg-hover:    #222228;
+  --bg-hero:     var(--page-bg-overlay);
+
+  --text-primary:   #e8e8f0;
+  --text-secondary: #b8b8cc;
+  --text-muted:     #787896;
+
+  --color-on-dark:  rgba(255, 255, 255, 0.90);
+
+  --accent:           #6366f1;
+  --accent-glow:      rgba(99, 102, 241, 0.18);
+  --accent-secondary: #4f51c7;
+
+  --border:       #2a2a32;
+  --border-glass: rgba(42, 42, 50, 0.90);
+  --border-dash:  rgba(99, 102, 241, 0.28);
+
+  --glass-blur:     14px;
+  --glass-bg:       rgba(20, 20, 23, 0.80);
+  --glass-bg-hover: rgba(34, 34, 40, 0.94);
+  --glass-border:   #2a2a32;
+
+  --color-up:      #34d399;
+  --color-down:    #f87171;
+  --color-neutral: #fbbf24;
+  --color-info:    #60a5fa;
+  --color-purple:  #a78bfa;
+
+  --bg-up:      rgba(52,  211, 153, 0.13);
+  --bg-down:    rgba(248, 113, 113, 0.13);
+  --bg-neutral: rgba(251, 191,  36, 0.13);
+  --bg-info:    rgba(96,  165, 250, 0.13);
+  --bg-purple:  rgba(167, 139, 250, 0.13);
+
+  --matrix-color:        rgba(99, 102, 241, 0.55);
+  --matrix-color-bright: rgba(200, 201, 255, 0.96);
+  --matrix-trail-alpha:  0.10;
+
+  --wordmark-bg:
+    linear-gradient(118deg, #6366f1 0%, #4f51c7 25%, #818cf8 50%, #6366f1 75%, #4f51c7 100%);
+  --wordmark-bg-size: 300% auto;
+
+  --gradient-text: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #4f51c7 100%);
+
+  --candle-up:   rgba(52, 211, 153, 0.22);
+  --candle-down: rgba(248, 113, 113, 0.22);
+
+  --shadow-sm:   0 1px 4px rgba(0, 0, 0, 0.60);
+  --shadow-md:   0 4px 18px rgba(0, 0, 0, 0.70);
+  --shadow-lg:   0 8px 36px rgba(0, 0, 0, 0.80);
+  --shadow-glow: 0 0 32px rgba(99, 102, 241, 0.22);
+
+  --bg-blur: 0px;
+}
+
+/* ── Light (#E7EEF4) ── */
+[data-theme="light"] {
+  --page-bg-image: none;
+  --page-bg-overlay: #E7EEF4;
+
+  --bg-base:     #E7EEF4;
+  --bg-elevated: #ffffff;
+  --bg-card:     rgba(255, 255, 255, 0.82);
+  --bg-hero:     var(--page-bg-overlay);
+
+  --text-primary:   #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted:     #9ca3af;
+
+  /* In light theme, white text on accent/coloured buttons is fine */
+  --color-on-dark:  rgba(255, 255, 255, 0.96);
+
+  --accent:           #2563eb;
+  --accent-glow:      rgba(37, 99, 235, 0.12);
+  --accent-secondary: #0891b2;
+
+  --border:       rgba(0, 0, 0, 0.08);
+  --border-glass: rgba(0, 0, 0, 0.05);
+  --border-dash:  rgba(37, 99, 235, 0.22);
+
+  --glass-blur:     14px;
+  --glass-bg:       rgba(229, 236, 244, 0.78);
+  --glass-bg-hover: rgba(255, 255, 255, 0.94);
+  --glass-border:   rgba(0, 0, 0, 0.08);
+
+  /* Darker / more saturated on light bg for sufficient contrast */
+  --color-up:      #059669;   /* emerald-600 */
+  --color-down:    #dc2626;   /* red-600     */
+  --color-neutral: #d97706;   /* amber-600   */
+  --color-info:    #2563eb;   /* same as accent */
+  --color-purple:  #7c3aed;   /* violet-700  */
+
+  --bg-up:      rgba(5,   150, 105, 0.10);
+  --bg-down:    rgba(220,  38,  38, 0.08);
+  --bg-neutral: rgba(217, 119,   6, 0.08);
+  --bg-info:    rgba(37,   99, 235, 0.10);
+  --bg-purple:  rgba(124,  58, 237, 0.10);
+
+  --matrix-color:        rgba(37, 99, 235, 0.35);
+  --matrix-color-bright: rgba(15, 50, 150, 0.85);
+  --matrix-trail-alpha:  0.12;
+
+  --wordmark-bg:
+    linear-gradient(118deg, #2563eb 0%, #0891b2 25%, #7c3aed 50%, #2563eb 75%, #0891b2 100%);
+  --wordmark-bg-size: 300% auto;
+
+  --gradient-text: linear-gradient(135deg, #2563eb 0%, #0891b2 50%, #7c3aed 100%);
+
+  --candle-up:   rgba(16, 185, 129, 0.28);
+  --candle-down: rgba(239, 68, 68, 0.28);
+
+  --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.13);
+  --shadow-glow: 0 0 32px rgba(37, 99, 235, 0.18);
+
+  --bg-blur: 0px;
+}
+
+/* ─── Global resets ─── */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; transition: var(--theme-transition); }
+
+/* ─── Semantic colour utility classes ──────────────────────────────
+   Use className instead of inline style for semantic colours so
+   they respond to theme changes automatically.
+   c-*  = foreground text colour
+   bg-* = background tint
+─────────────────────────────────────────────────────────────────── */
+.c-up      { color: var(--color-up)      !important; }
+.c-down    { color: var(--color-down)    !important; }
+.c-neutral { color: var(--color-neutral) !important; }
+.c-info    { color: var(--color-info)    !important; }
+.c-purple  { color: var(--color-purple)  !important; }
+.c-on-dark { color: var(--color-on-dark) !important; }
+.bg-up      { background: var(--bg-up)      !important; }
+.bg-down    { background: var(--bg-down)    !important; }
+.bg-neutral { background: var(--bg-neutral) !important; }
+.bg-info    { background: var(--bg-info)    !important; }
+.bg-purple  { background: var(--bg-purple)  !important; }
+
+/* ─── Theme-matched scrollbars ─── */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; transition: background 0.15s; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+body {
+  margin: 0;
+  /* transparent so fixed .page-bg/.page-overlay divs are visible behind content */
+  background-color: transparent;
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  min-height: 100vh;
+  font-family: var(--font-dm-sans), var(--font-geist-sans), system-ui, sans-serif;
+  font-weight: 100;
+}
+
+/* html gets the solid fallback colour so the page isn't white while the
+   fixed layers mount, and for Dark/Light themes where no image is used. */
+html {
+  background-color: var(--bg-base);
+}
+
+/* ─── Page background — two separate layers ───────────────────────
+   Layer 1 (.page-bg):    the velvet image, blurred in isolation so
+                          glass cards read as sharp against it.
+   Layer 2 (.page-overlay): sharp gradient overlay for readability;
+                          applied without blur so colour depth is crisp.
+   Glass cards (.glass-card) sit above both with their own
+   backdrop-filter blur targeting the combined layer below.
+   ─────────────────────────────────────────────────────────────── */
+
+/* Blurred image layer — z-index -2 */
+.page-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: var(--page-bg-image, var(--bg-base)) center / cover no-repeat;
+  /* filter: blur() leaks semi-transparent edges at viewport bounds;
+     scale(1 + blur/min-dimension) pushes those artefacts off-screen. */
+  filter: grayscale(1) blur(var(--bg-blur, 0px));
+  transform: scale(1.06);
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Sharp gradient overlay — z-index -1, no filter */
+.page-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--page-bg-overlay);
+  pointer-events: none;
+}
+
+/* ─── Glass card utility ─── */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+.glass-card:hover {
+  background: var(--glass-bg-hover);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+/* ─── Gradient heading ─── */
+.gradient-text {
+  background: var(--gradient-text);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shimmer 5s ease infinite;
+}
+@keyframes gradient-shimmer {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ─── Wordmark clip (image/gradient shows through letterforms) ─── */
+.wordmark-clip {
+  background: var(--wordmark-bg);
+  background-size: var(--wordmark-bg-size);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: wordmark-shift 8s ease infinite;
+}
+@keyframes wordmark-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ─── Scroll-triggered flip ─── */
+.flip-card-wrapper {
+  opacity: 0;
+  transform: perspective(900px) rotateY(90deg);
+}
+.flip-card-wrapper.visible {
+  animation: flip-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes flip-in {
+  from { opacity: 0; transform: perspective(900px) rotateY(90deg); }
+  to   { opacity: 1; transform: perspective(900px) rotateY(0deg); }
+}
+
+/* ─── Pricing Book (page-flip integration) ─── */
+
+.pricing-book {
+  /* Fixed height container prevents jumping on page flip */
+  height: 560px;
+  width: 420px;
+  max-width: 100%;
+}
+
+/* Override page-flip's default backgrounds */
+.pricing-book .stf__parent {
+  background: transparent !important;
+}
+.pricing-book .stf__wrapper {
+  background: transparent !important;
+  padding-bottom: 0 !important;
+  height: 560px !important;
+}
+.pricing-book .stf__block {
+  background: transparent !important;
+}
+
+/* Each "page" in the flipbook */
+.pricing-page {
+  background: transparent !important;
+  overflow: visible;
+}
+
+/* page-flip items */
+.pricing-book .stf__item {
+  overflow: visible !important;
+}
+
+/* ─── Pricing card inner – PREMIUM GLASSMORPHISM ─── */
+.pricing-page-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
+
+  /* Strong frosted glass background — clearly visible */
+  background:
+    linear-gradient(
+      160deg,
+      rgba(99, 102, 241, 0.15) 0%,
+      rgba(30, 30, 50, 0.55) 25%,
+      rgba(15, 15, 25, 0.50) 50%,
+      rgba(30, 30, 55, 0.55) 75%,
+      rgba(99, 102, 241, 0.10) 100%
+    );
+  backdrop-filter: blur(28px) saturate(1.6) brightness(1.1);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6) brightness(1.1);
+
+  /* Bright glass border — clearly visible indigo tint */
+  border: 1.5px solid rgba(99, 102, 241, 0.35);
+  box-shadow:
+    /* Outer glow */
+    0 0 40px rgba(99, 102, 241, 0.12),
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    /* Inner light edges — the key to visible glass */
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(99, 102, 241, 0.08);
+
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.pricing-page-inner:hover {
+  border-color: rgba(99, 102, 241, 0.50);
+  box-shadow:
+    0 0 60px rgba(99, 102, 241, 0.20),
+    0 12px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(99, 102, 241, 0.12);
+}
+
+/* Animated shimmer — visible diagonal light sweep */
+@keyframes glass-shimmer-move {
+  0%   { transform: translateX(-100%) rotate(25deg); }
+  100% { transform: translateX(250%) rotate(25deg); }
+}
+
+.glass-shimmer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.glass-shimmer::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 60%;
+  height: 220%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 30%,
+    rgba(255, 255, 255, 0.10) 48%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.10) 52%,
+    rgba(255, 255, 255, 0.04) 70%,
+    transparent 100%
+  );
+  animation: glass-shimmer-move 5s ease-in-out infinite;
+}
+
+/* Edge glow — visible border-light accents */
+.glass-edge-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    /* Top-left highlight */
+    radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.25) 0%, transparent 55%),
+    /* Bottom-right accent */
+    radial-gradient(ellipse at 80% 100%, rgba(99, 102, 241, 0.18) 0%, transparent 55%),
+    /* Top edge light streak */
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 30%);
+}
+
+/* Light theme adjustments for glass pricing cards */
+[data-theme="light"] .pricing-page-inner {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(37, 99, 235, 0.10) 0%,
+      rgba(255, 255, 255, 0.70) 25%,
+      rgba(240, 245, 255, 0.65) 50%,
+      rgba(255, 255, 255, 0.70) 75%,
+      rgba(37, 99, 235, 0.08) 100%
+    );
+  border-color: rgba(37, 99, 235, 0.20);
+  box-shadow:
+    0 0 30px rgba(37, 99, 235, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(37, 99, 235, 0.06);
+}
+[data-theme="light"] .pricing-page-inner:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow:
+    0 0 50px rgba(37, 99, 235, 0.15),
+    0 12px 48px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(37, 99, 235, 0.10);
+}
+[data-theme="light"] .glass-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 40%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.3) 60%,
+    transparent 100%
+  );
+}
+[data-theme="light"] .glass-edge-glow {
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(37, 99, 235, 0.15) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 100%, rgba(37, 99, 235, 0.10) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 30%);
+}
+
+/* ─── Fade-up on scroll ─── */
+.fade-in-on-scroll { opacity: 0; transform: translateY(20px); }
+.fade-in-on-scroll.visible {
+  animation: fade-up 0.6s ease forwards;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── prefers-reduced-motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .flip-card-wrapper.visible,
+  .fade-in-on-scroll.visible { animation: none; opacity: 1; transform: none; }
+  .gradient-text, .wordmark-clip { animation: none; }
+  .glass-shimmer::after { animation: none; }
+}
+
