@@ -17,6 +17,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/user/register", handleRegister)
 	mux.HandleFunc("/api/v1/user/login", handleLogin)
+	mux.HandleFunc("/api/v1/user/verify-email", handleVerifyEmail)
+	mux.HandleFunc("/api/v1/user/resend-code", handleResendCode)
 	mux.HandleFunc("/api/v1/user/me", handleMe)
 	mux.HandleFunc("/api/v1/user/logout", handleLogout)
 

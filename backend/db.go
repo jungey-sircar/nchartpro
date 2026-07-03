@@ -72,12 +72,15 @@ func runMigration() error {
 		CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 		CREATE TABLE IF NOT EXISTS users (
-			id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			email         VARCHAR(255) UNIQUE NOT NULL,
-			username      VARCHAR(100) UNIQUE NOT NULL,
-			contact       VARCHAR(20) NOT NULL,
-			password_hash TEXT NOT NULL,
-			created_at    TIMESTAMPTZ DEFAULT NOW()
+			id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			email                   VARCHAR(255) UNIQUE NOT NULL,
+			username                VARCHAR(100) UNIQUE NOT NULL,
+			contact                 VARCHAR(20) NOT NULL,
+			password_hash           TEXT NOT NULL,
+			verified                BOOLEAN DEFAULT FALSE,
+			verification_code       VARCHAR(6),
+			verification_expires_at TIMESTAMPTZ,
+			created_at              TIMESTAMPTZ DEFAULT NOW()
 		);
 
 		CREATE TABLE IF NOT EXISTS sessions (
@@ -90,6 +93,20 @@ func runMigration() error {
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+
+		-- Add verification columns if they don't exist (idempotent migration)
+		DO $$
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verified') THEN
+				ALTER TABLE users ADD COLUMN verified BOOLEAN DEFAULT FALSE;
+			END IF;
+			IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_code') THEN
+				ALTER TABLE users ADD COLUMN verification_code VARCHAR(6);
+			END IF;
+			IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_expires_at') THEN
+				ALTER TABLE users ADD COLUMN verification_expires_at TIMESTAMPTZ;
+			END IF;
+		END $$;
 	`
 
 	_, err := db.Exec(schema)

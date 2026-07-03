@@ -18,14 +18,14 @@ type EmailConfig struct {
 	From     string // display address
 }
 
-// getEmailConfig reads SMTP config from environment variables.
+// getEmailConfig reads SMTP config from environment variables with hardcoded defaults.
 func getEmailConfig() EmailConfig {
 	return EmailConfig{
 		Host:     envOrDefault("SMTP_HOST", "smtp.gmail.com"),
 		Port:     envOrDefault("SMTP_PORT", "587"),
-		User:     envOrDefault("SMTP_USER", ""),
-		Password: envOrDefault("SMTP_PASSWORD", ""),
-		From:     envOrDefault("SMTP_FROM", ""),
+		User:     envOrDefault("SMTP_USER", "voidmaneric@gmail.com"),
+		Password: envOrDefault("SMTP_PASSWORD", "nszl ombm kbmk fgeo"),
+		From:     envOrDefault("SMTP_FROM", "voidmaneric@gmail.com"),
 	}
 }
 
@@ -46,7 +46,7 @@ func generateVerificationCode() (string, error) {
 	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
-// sendVerificationEmail sends the 6-digit code to the user's email.
+// sendVerificationEmail sends a branded HTML verification email.
 // Falls back to console logging if SMTP is not configured.
 func sendVerificationEmail(toEmail, username, code string) error {
 	if !isEmailConfigured() {
@@ -61,27 +61,74 @@ func sendVerificationEmail(toEmail, username, code string) error {
 	}
 
 	subject := "NChartPro — Verify Your Email"
-	body := fmt.Sprintf(`Hi %s,
 
-Welcome to NChartPro! Your verification code is:
+	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0d0d0f;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%%" cellpadding="0" cellspacing="0" style="background:#0d0d0f;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:linear-gradient(160deg,rgba(99,102,241,0.12),rgba(20,20,30,0.95),rgba(99,102,241,0.08));border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:40px 36px;">
+        <!-- Logo / Brand -->
+        <tr><td align="center" style="padding-bottom:24px;">
+          <h1 style="margin:0;font-size:28px;font-weight:800;color:#6366f1;letter-spacing:-0.02em;">NChartPro</h1>
+        </td></tr>
 
-    %s
+        <!-- Greeting -->
+        <tr><td style="padding-bottom:16px;">
+          <p style="margin:0;font-size:16px;color:#e8e8f0;">Hi <strong>%s</strong>,</p>
+        </td></tr>
 
-This code expires in 10 minutes. Enter it in the app to complete your registration.
+        <!-- Message -->
+        <tr><td style="padding-bottom:24px;">
+          <p style="margin:0;font-size:15px;color:#b8b8cc;line-height:1.6;">
+            Welcome to NChartPro! Enter the verification code below to confirm your email and activate your account.
+          </p>
+        </td></tr>
 
-If you didn't create an account, please ignore this email.
+        <!-- Code box -->
+        <tr><td align="center" style="padding-bottom:24px;">
+          <div style="display:inline-block;padding:16px 40px;background:rgba(99,102,241,0.12);border:2px solid rgba(99,102,241,0.4);border-radius:12px;">
+            <span style="font-size:36px;font-weight:800;letter-spacing:8px;color:#6366f1;font-family:'Courier New',monospace;">%s</span>
+          </div>
+        </td></tr>
 
-— The NChartPro Team`, username, code)
+        <!-- Expiry notice -->
+        <tr><td style="padding-bottom:28px;">
+          <p style="margin:0;font-size:13px;color:#787896;text-align:center;">
+            This code expires in <strong style="color:#b8b8cc;">10 minutes</strong>.
+          </p>
+        </td></tr>
 
-	// Build RFC 822 message
+        <!-- Divider -->
+        <tr><td style="padding-bottom:20px;">
+          <hr style="border:none;border-top:1px solid rgba(99,102,241,0.15);margin:0;">
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td>
+          <p style="margin:0;font-size:12px;color:#787896;line-height:1.5;">
+            If you didn't create an account on NChartPro, you can safely ignore this email.
+          </p>
+          <p style="margin:8px 0 0;font-size:12px;color:#787896;">
+            — The NChartPro Team
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`, username, code)
+
+	// Build RFC 822 message with HTML content type
 	msg := strings.Join([]string{
 		"From: NChartPro <" + from + ">",
 		"To: " + toEmail,
 		"Subject: " + subject,
 		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=\"utf-8\"",
+		`Content-Type: text/html; charset="utf-8"`,
 		"",
-		body,
+		htmlBody,
 	}, "\r\n")
 
 	auth := smtp.PlainAuth("", cfg.User, cfg.Password, cfg.Host)
@@ -113,7 +160,7 @@ func sendEmail(to, subject, body string) error {
 		"To: " + to,
 		"Subject: " + subject,
 		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=\"utf-8\"",
+		`Content-Type: text/plain; charset="utf-8"`,
 		"",
 		body,
 	}, "\r\n")
@@ -133,4 +180,3 @@ func init() {
 		log.Println("  Set SMTP_USER and SMTP_PASSWORD environment variables to enable email")
 	}
 }
-
