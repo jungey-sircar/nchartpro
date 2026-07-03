@@ -9,12 +9,14 @@ import PricingSection from './PricingSection';
 import Footer from './Footer';
 import AuthModal, { type AuthUser } from './AuthModal';
 import MatrixCanvas from './MatrixCanvas';
+import LightTrails from './LightTrails';
 
 export default function LandingPage() {
   const { theme } = useTheme();
   const [user, setUser]         = useState<AuthUser | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [showTrails, setShowTrails] = useState(true);
 
   // Check current session on mount
   useEffect(() => {
@@ -108,6 +110,9 @@ export default function LandingPage() {
       {showAuth && (
         <AuthModal onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} />
       )}
+
+      {/* Cinematic light-trail intro — plays once, then unmounts */}
+      {showTrails && <LightTrails onComplete={() => setShowTrails(false)} />}
     </>
   );
 }

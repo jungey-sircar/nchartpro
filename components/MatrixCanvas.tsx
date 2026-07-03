@@ -7,8 +7,10 @@ import { type Theme } from './ThemeProvider';
 // SPEED & SIZE CONTROLS
 // ═══════════════════════════════════════════════════════════════════
 const STEP_MS          = 30;   // ms between animation ticks
-const STREAM_SPEED_MIN = 0.8;  // px per tick (min)
-const STREAM_SPEED_MAX = 2.2;  // px per tick (max)
+const STREAM_SPEED_MIN = 0.3;  // px per tick (min) — slow drifters
+const STREAM_SPEED_MAX = 1.4;  // px per tick (max) — still gentle
+
+const SPARK_CHANCE     = 0.018; // ~2% chance per candle per tick to spark
 
 const CANDLE_W         = 10;   // candle body width (px)
 const WICK_W           = 1;    // wick line width (px)
@@ -60,7 +62,7 @@ function buildStream(x: number, h: number): Stream {
     y: -Math.random() * h * 1.5,
     speed: STREAM_SPEED_MIN + Math.random() * (STREAM_SPEED_MAX - STREAM_SPEED_MIN),
     candles,
-    brightness: 0.55 + Math.random() * 0.35,
+    brightness: 0.15 + Math.random() * 0.20,  // faded: 0.15–0.35 base opacity
   };
 }
 
@@ -165,6 +167,9 @@ export default function MatrixCanvas({ theme }: Props) {
             const posFade = 1 - (ci / s.candles.length) * 0.6;
             const alpha   = s.brightness * posFade;
 
+            // ── Random spark check ──
+            const isSparking = Math.random() < SPARK_CHANCE;
+
             const cx = s.x;
             const bodyColor = c.up
               ? colorWithAlpha(pal.up, alpha)
@@ -188,16 +193,63 @@ export default function MatrixCanvas({ theme }: Props) {
               c.bodyH,
             );
 
-            // Subtle glow on the body for head candles
-            if (ci === 0) {
-              ctx.shadowColor   = c.up
-                ? colorWithAlpha(pal.up, 0.4)
-                : colorWithAlpha(pal.down, 0.4);
-              ctx.shadowBlur    = 8;
-              ctx.fillStyle     = bodyColor;
-              ctx.fillRect(cx - CANDLE_W / 2, bodyTopY, CANDLE_W, c.bodyH);
-              ctx.shadowColor   = 'transparent';
-              ctx.shadowBlur    = 0;
+            // ── Fire spark at the wick tip ──
+            if (isSparking) {
+              ctx.save();
+
+              const tipX = cx;
+              const tipY = wickTopY;
+
+              // Layer 1: Large soft red/orange outer glow
+              ctx.shadowColor = 'rgba(255, 100, 20, 0.8)';
+              ctx.shadowBlur  = 18;
+              const outerGrad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 10);
+              outerGrad.addColorStop(0, 'rgba(255, 180, 50, 0.7)');
+              outerGrad.addColorStop(0.5, 'rgba(255, 100, 20, 0.3)');
+              outerGrad.addColorStop(1, 'rgba(200, 40, 0, 0)');
+              ctx.fillStyle = outerGrad;
+              ctx.beginPath();
+              ctx.arc(tipX, tipY, 10, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Layer 2: Medium yellow-orange core
+              ctx.shadowColor = 'rgba(255, 200, 50, 0.9)';
+              ctx.shadowBlur  = 10;
+              const midGrad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 5);
+              midGrad.addColorStop(0, 'rgba(255, 255, 220, 0.95)');
+              midGrad.addColorStop(0.5, 'rgba(255, 200, 60, 0.7)');
+              midGrad.addColorStop(1, 'rgba(255, 140, 30, 0)');
+              ctx.fillStyle = midGrad;
+              ctx.beginPath();
+              ctx.arc(tipX, tipY, 5, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Layer 3: Tiny white-hot center
+              ctx.shadowBlur = 4;
+              ctx.fillStyle = 'rgba(255, 255, 250, 0.95)';
+              ctx.beginPath();
+              ctx.arc(tipX, tipY, 1.5, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Ember sparks — tiny dots shooting from the tip
+              ctx.shadowColor = 'rgba(255, 180, 50, 0.6)';
+              ctx.shadowBlur  = 3;
+              const emberCount = 3 + Math.floor(Math.random() * 3);
+              for (let e = 0; e < emberCount; e++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist  = 4 + Math.random() * 10;
+                const ex    = tipX + Math.cos(angle) * dist;
+                const ey    = tipY + Math.sin(angle) * dist - Math.random() * 5; // bias upward
+                const eSize = 0.5 + Math.random() * 1.2;
+                const eAlpha = 0.5 + Math.random() * 0.5;
+
+                ctx.fillStyle = `rgba(255, ${150 + Math.floor(Math.random() * 100)}, ${Math.floor(Math.random() * 50)}, ${eAlpha})`;
+                ctx.beginPath();
+                ctx.arc(ex, ey, eSize, 0, Math.PI * 2);
+                ctx.fill();
+              }
+
+              ctx.restore();
             }
           }
 
@@ -212,7 +264,7 @@ export default function MatrixCanvas({ theme }: Props) {
         if (s.y - totalH > h + 100) {
           s.y = -totalH - Math.random() * 300;
           s.speed = STREAM_SPEED_MIN + Math.random() * (STREAM_SPEED_MAX - STREAM_SPEED_MIN);
-          s.brightness = 0.55 + Math.random() * 0.35;
+          s.brightness = 0.15 + Math.random() * 0.20;
           // Regenerate candle shapes
           for (let i = 0; i < s.candles.length; i++) {
             s.candles[i] = randomCandle();

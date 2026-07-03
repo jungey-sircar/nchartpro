@@ -54,14 +54,66 @@ export default function HeroSection({ theme }: Props) {
         alignItems: 'center',
       }}
     >
-      {/* NChartPro wordmark — candle animation clipped to letterforms */}
+      {/* ── Hero trader image — large, blended into right side ── */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '55%',
+          height: '100%',
+          zIndex: 1,
+          overflow: 'hidden',
+        }}
+      >
+        <img
+          src="/images/hero-trader.jpg"
+          alt="Nepali trader analyzing NChartPro candlestick charts"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center center',
+            display: 'block',
+            opacity: 0.45,
+          }}
+        />
+        {/* Left gradient fade — blends image into the dark background */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to right, var(--color-bg, #0d0d0f) 0%, rgba(13, 13, 15, 0.7) 30%, rgba(13, 13, 15, 0.1) 60%, transparent 100%)',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Bottom gradient fade */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to top, var(--color-bg, #0d0d0f) 0%, rgba(13, 13, 15, 0.3) 25%, transparent 50%)',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Top gradient fade */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to bottom, var(--color-bg, #0d0d0f) 0%, rgba(13, 13, 15, 0.2) 15%, transparent 35%)',
+            pointerEvents: 'none',
+          }}
+        />
+      </div>
+
+      {/* ── NChartPro wordmark — positioned on the left ── */}
       <div
         style={{
           position: 'relative',
           zIndex: 3,
-          marginLeft: '12.5vw',
-          width: '50vw',
-          maxWidth: 'calc(100vw - 12.5vw - 30vw - 1rem)',
+          padding: '0 4vw',
+          width: '65%',
           userSelect: 'none',
           overflow: 'visible',
         }}

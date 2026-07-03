@@ -158,14 +158,28 @@ export default function PricingSection() {
   }, [isFlipReady]);
 
   const flipNext = useCallback(() => {
-    if (pageFlipRef.current && isFlipReady) {
-      pageFlipRef.current.flipNext('bottom');
+    const pf = pageFlipRef.current;
+    if (!pf || !isFlipReady) return;
+    const current = pf.getCurrentPageIndex();
+    const total   = pf.getPageCount();
+    if (current >= total - 1) {
+      // Wrap to first page
+      pf.flip(0, 'bottom');
+    } else {
+      pf.flipNext('bottom');
     }
   }, [isFlipReady]);
 
   const flipPrev = useCallback(() => {
-    if (pageFlipRef.current && isFlipReady) {
-      pageFlipRef.current.flipPrev('bottom');
+    const pf = pageFlipRef.current;
+    if (!pf || !isFlipReady) return;
+    const current = pf.getCurrentPageIndex();
+    const total   = pf.getPageCount();
+    if (current <= 0) {
+      // Wrap to last page
+      pf.flip(total - 1, 'top');
+    } else {
+      pf.flipPrev('top');
     }
   }, [isFlipReady]);
 
