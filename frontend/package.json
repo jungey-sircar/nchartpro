@@ -1,0 +1,7 @@
+{
+  "name": "frontend-shim",
+  "private": true,
+  "scripts": {
+    "start": "cd /app && npx next dev -H 0.0.0.0 -p 3000"
+  }
+}

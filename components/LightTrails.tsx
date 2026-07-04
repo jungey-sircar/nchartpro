@@ -5,31 +5,118 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 // ═══════════════════════════════════════════════════════════════════
 // TIMING
 // ═══════════════════════════════════════════════════════════════════
-const DRAW_DURATION_MS = 2600;
-const HOLD_DURATION_MS = 400;
-const FADE_DURATION_MS = 1100;
+const DRAW_DURATION_MS = 3600;
+const HOLD_DURATION_MS = 650;
+const FADE_DURATION_MS = 1300;
 
 // ═══════════════════════════════════════════════════════════════════
-// FIREBALL PARTICLES
+// PALETTE — champagne gold with fiery accents
 // ═══════════════════════════════════════════════════════════════════
-const MAX_PARTICLES = 120;
-const FLAME_EMIT_RATE = 6;   // flame particles per frame from the fireball
-const EMBER_EMIT_RATE = 2;   // tiny ember sparks
+const GOLD = { r: 235, g: 190, b: 115 };
+const FIRE = { r: 255, g: 130, b: 35 };       // fiery outer glow
+const GOLD_CORE = { r: 255, g: 250, b: 232 }; // warm white core
 
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  decay: number;
-  size: number;
-  type: 'flame' | 'ember';
+const SAMPLE_COUNT = 560;
+
+interface Pt { x: number; y: number }
+
+// ═══════════════════════════════════════════════════════════════════
+// PATH — grand signature: enters from the bottom-left corner of the
+// screen, writes a calligraphic cursive N, then a sweeping flourish
+// arcs across the top and exits at the top-left corner.
+// ═══════════════════════════════════════════════════════════════════
+function sampleCursiveN(w: number, h: number): { pts: Pt[]; widths: number[] } {
+  // Glyph metrics (viewbox ~100x100, N spans x:6-94, y:8-86)
+  const glyphW = 90, glyphH = 80, gx = 4, gy = 7;
+  const targetH = Math.min(h * 0.62, w * 0.38);
+  const scale = targetH / glyphH;
+  const targetW = glyphW * scale;
+  const offX = (w - targetW) / 2 - gx * scale;
+  const offY = (h - targetH) / 2 - gy * scale;
+
+  // Screen corners mapped into glyph space (slightly off-screen)
+  const toGX = (sx: number) => (sx - offX) / scale;
+  const toGY = (sy: number) => (sy - offY) / scale;
+  const blx = toGX(-40), bly = toGY(h + 40);   // bottom-left corner
+  const tlx = toGX(-40), tly = toGY(-40);       // top-left corner
+
+  const f = (n: number) => n.toFixed(2);
+
+  const pathD =
+    // Entry: sweep in from bottom-left corner of the screen
+    `M ${f(blx)} ${f(bly)} ` +
+    `C ${f(blx + (21 - blx) * 0.45)} ${f(bly)}, ${f(4)} ${f(90)}, 21 79 ` +
+    // Cursive N body
+    'C 27 70, 32 50, 35 30 ' +
+    'C 37 18, 38 11, 34 9.5 ' +
+    'C 30 8, 27.5 13, 29.5 21 ' +
+    'C 33 34, 43 56, 53 72 ' +
+    'C 57 78.5, 61 84, 65 79.5 ' +
+    'C 71 72, 76.5 51, 80.5 31 ' +
+    'C 82.5 21, 84.5 13.5, 88.5 12 ' +
+    // Exit flourish: tight crest, then a wave sweeping left to top-left corner
+    'C 90.5 10.5, 90 6, 84.5 4.5 ' +
+    'C 76 2.2, 66 0, 52 -3.5 ' +
+    `C ${f(20)} ${f(-11)}, ${f(tlx + (52 - tlx) * 0.35)} ${f(tly + 6)}, ${f(tlx)} ${f(tly)}`;
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width', '0');
+  svg.setAttribute('height', '0');
+  svg.style.position = 'absolute';
+  svg.style.visibility = 'hidden';
+  const path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('d', pathD);
+  svg.appendChild(path);
+  document.body.appendChild(svg);
+
+  const total = path.getTotalLength();
+  const pts: Pt[] = [];
+  for (let i = 0; i <= SAMPLE_COUNT; i++) {
+    const p = path.getPointAtLength((i / SAMPLE_COUNT) * total);
+    pts.push({ x: p.x * scale + offX, y: p.y * scale + offY });
+  }
+  document.body.removeChild(svg);
+
+  // Copperplate pen-pressure widths: thick downstrokes, hairline upstrokes
+  const baseW = Math.max(1.2, scale * 0.06);
+  const ampW = Math.max(5, scale * 0.30);
+  const nx = Math.cos(-Math.PI / 4);
+  const ny = Math.sin(-Math.PI / 4);
+  const widths: number[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 2)];
+    const b = pts[Math.min(pts.length - 1, i + 2)];
+    let dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len; dy /= len;
+    const perp = Math.abs(dx * ny - dy * nx);
+    const t = i / (pts.length - 1);
+    const taper = Math.min(1, t / 0.03, (1 - t) / 0.04);
+    widths.push((baseW + ampW * perp * perp) * Math.max(0.3, taper));
+  }
+  for (let pass = 0; pass < 3; pass++) {
+    for (let i = 1; i < widths.length - 1; i++) {
+      widths[i] = (widths[i - 1] + widths[i] * 2 + widths[i + 1]) / 4;
+    }
+  }
+  return { pts, widths };
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// HELPERS
+// PARTICLES — gold dust, fiery embers, star sparkles
 // ═══════════════════════════════════════════════════════════════════
+const MAX_PARTICLES = 260;
+
+interface Particle {
+  x: number; y: number;
+  vx: number; vy: number;
+  life: number; decay: number;
+  size: number;
+  phase: number;
+  kind: 'dust' | 'ember' | 'star';
+}
+
 function rand(min: number, max: number) {
   return min + Math.random() * (max - min);
 }
@@ -38,160 +125,17 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-function cubicBezier(
-  p0: number, p1: number, p2: number, p3: number, t: number,
-): number {
-  const mt = 1 - t;
-  return mt * mt * mt * p0 +
-    3 * mt * mt * t * p1 +
-    3 * mt * t * t * p2 +
-    t * t * t * p3;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// FIRE COLOR — life-based: white → yellow → orange → red → dark red
-// ═══════════════════════════════════════════════════════════════════
-function fireColor(life: number): string {
-  // life: 1 (just born) → 0 (dead)
-  if (life > 0.8) {
-    // White-yellow core
-    const t = (life - 0.8) / 0.2;
-    const r = 255;
-    const g = Math.round(lerp(230, 255, t));
-    const b = Math.round(lerp(100, 220, t));
-    return `rgba(${r}, ${g}, ${b}, ${life})`;
-  } else if (life > 0.5) {
-    // Yellow → orange
-    const t = (life - 0.5) / 0.3;
-    const r = 255;
-    const g = Math.round(lerp(140, 230, t));
-    const b = Math.round(lerp(20, 100, t));
-    return `rgba(${r}, ${g}, ${b}, ${life * 0.9})`;
-  } else if (life > 0.2) {
-    // Orange → red
-    const t = (life - 0.2) / 0.3;
-    const r = Math.round(lerp(200, 255, t));
-    const g = Math.round(lerp(40, 140, t));
-    const b = Math.round(lerp(10, 20, t));
-    return `rgba(${r}, ${g}, ${b}, ${life * 0.8})`;
-  } else {
-    // Red → dark smoke
-    const t = life / 0.2;
-    const r = Math.round(lerp(80, 200, t));
-    const g = Math.round(lerp(20, 40, t));
-    const b = Math.round(lerp(10, 10, t));
-    return `rgba(${r}, ${g}, ${b}, ${life * 0.5})`;
+// Ember color: white-hot → orange → deep red as it dies
+function emberColor(life: number, alpha: number): string {
+  if (life > 0.7) {
+    const t = (life - 0.7) / 0.3;
+    return `rgba(255, ${Math.round(lerp(190, 245, t))}, ${Math.round(lerp(80, 190, t))}, ${alpha})`;
+  } else if (life > 0.35) {
+    const t = (life - 0.35) / 0.35;
+    return `rgba(255, ${Math.round(lerp(110, 190, t))}, ${Math.round(lerp(25, 80, t))}, ${alpha})`;
   }
-}
-
-function fireShadowColor(life: number): string {
-  if (life > 0.6) return 'rgba(255, 200, 50, 0.6)';
-  if (life > 0.3) return 'rgba(255, 120, 20, 0.4)';
-  return 'rgba(200, 40, 10, 0.2)';
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// TRAIL COLOR — gradient from warm (near head) to cool (tail)
-// ═══════════════════════════════════════════════════════════════════
-function getTrailColor(t: number): { r: number; g: number; b: number } {
-  // t: position along path 0→1
-  if (t < 0.35) {
-    const lt = t / 0.35;
-    return {
-      r: Math.round(lerp(255, 255, lt)),
-      g: Math.round(lerp(160, 200, lt)),
-      b: Math.round(lerp(30, 80, lt)),
-    };
-  } else if (t < 0.7) {
-    const lt = (t - 0.35) / 0.35;
-    return {
-      r: Math.round(lerp(255, 200, lt)),
-      g: Math.round(lerp(200, 140, lt)),
-      b: Math.round(lerp(80, 255, lt)),
-    };
-  } else {
-    const lt = (t - 0.7) / 0.3;
-    return {
-      r: Math.round(lerp(200, 140, lt)),
-      g: Math.round(lerp(140, 120, lt)),
-      b: Math.round(lerp(255, 255, lt)),
-    };
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// PATH — smooth N-shaped bezier curves
-// ═══════════════════════════════════════════════════════════════════
-interface CurveSegment {
-  p0x: number; p0y: number;
-  p1x: number; p1y: number;
-  p2x: number; p2y: number;
-  p3x: number; p3y: number;
-}
-
-function generateNPath(w: number, h: number): CurveSegment[] {
-  // Clean cursive N — three strokes, slanted right
-  //
-  //     B·                         ·D
-  //    / ·`.                      /
-  //   /   · `.                   /
-  //  /    ·   `.                /
-  // A     ·     `.             /
-  //       ·       `.          /
-  //       ·         `.       /
-  //       ·           `.    /
-  //       ·             `. /
-  //       ·               C
-  //
-
-  const A = { x: w * 0.05,  y: h * 0.88 };  // bottom-left
-  const B = { x: w * 0.20,  y: h * 0.08 };  // top-left (leaned right)
-  const C = { x: w * 0.60,  y: h * 0.88 };  // bottom-right
-  const D = { x: w * 0.90,  y: h * 0.05 };  // top-right (leaned far right)
-
-  return [
-    // Stroke 1: upstroke — bottom-left to top, leaning right, gentle S-curve
-    {
-      p0x: A.x, p0y: A.y,
-      p1x: A.x + w * 0.04, p1y: lerp(A.y, B.y, 0.55),
-      p2x: B.x - w * 0.02, p2y: lerp(A.y, B.y, 0.35),
-      p3x: B.x, p3y: B.y,
-    },
-    // Stroke 2: diagonal down — top-left to bottom-right, slight curve
-    {
-      p0x: B.x, p0y: B.y,
-      p1x: lerp(B.x, C.x, 0.33), p1y: lerp(B.y, C.y, 0.25),
-      p2x: lerp(B.x, C.x, 0.67), p2y: lerp(B.y, C.y, 0.75),
-      p3x: C.x, p3y: C.y,
-    },
-    // Stroke 3: upstroke — bottom-right to top-right, leaning right
-    {
-      p0x: C.x, p0y: C.y,
-      p1x: C.x + w * 0.06, p1y: lerp(C.y, D.y, 0.55),
-      p2x: D.x - w * 0.04, p2y: lerp(C.y, D.y, 0.35),
-      p3x: D.x, p3y: D.y,
-    },
-  ];
-}
-
-function evalPath(segments: CurveSegment[], t: number): { x: number; y: number } {
-  const n = segments.length;
-  const globalT = t * n;
-  const segIdx = Math.min(n - 1, Math.floor(globalT));
-  const localT = globalT - segIdx;
-  const seg = segments[segIdx];
-  return {
-    x: cubicBezier(seg.p0x, seg.p1x, seg.p2x, seg.p3x, localT),
-    y: cubicBezier(seg.p0y, seg.p1y, seg.p2y, seg.p3y, localT),
-  };
-}
-
-function samplePath(segments: CurveSegment[], count: number): { x: number; y: number }[] {
-  const pts: { x: number; y: number }[] = [];
-  for (let i = 0; i <= count; i++) {
-    pts.push(evalPath(segments, i / count));
-  }
-  return pts;
+  const t = life / 0.35;
+  return `rgba(${Math.round(lerp(160, 255, t))}, ${Math.round(lerp(40, 110, t))}, ${Math.round(lerp(15, 25, t))}, ${alpha})`;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -228,248 +172,254 @@ export default function LightTrails({ onComplete }: Props) {
     canvas.style.height = h + 'px';
     ctx.scale(dpr, dpr);
 
-    const segments = generateNPath(w, h);
-    const SAMPLE_COUNT = 300;
-    const sampledPts = samplePath(segments, SAMPLE_COUNT);
+    const { pts, widths } = sampleCursiveN(w, h);
     const particles: Particle[] = [];
 
-    const startTime = performance.now();
-    let animId = 0;
-    let phase: 'draw' | 'hold' | 'fade' = 'draw';
-    let phaseStart = startTime;
+    // Offscreen canvas accumulates the ink stroke (drawn incrementally)
+    const ink = document.createElement('canvas');
+    ink.width = w * dpr;
+    ink.height = h * dpr;
+    const inkCtx = ink.getContext('2d')!;
+    inkCtx.scale(dpr, dpr);
+    inkCtx.lineCap = 'round';
+    inkCtx.lineJoin = 'round';
 
-    // ─── Emit fire particles from the fireball head ───
-    function emitFireParticles(x: number, y: number) {
-      for (let i = 0; i < FLAME_EMIT_RATE; i++) {
-        const angle = rand(0, Math.PI * 2);
-        const speed = rand(0.5, 3);
-        const p: Particle = {
-          x: x + rand(-4, 4),
-          y: y + rand(-4, 4),
-          vx: Math.cos(angle) * speed + rand(-0.5, 0.5),
-          vy: Math.sin(angle) * speed - rand(0.5, 2), // bias upward (flames rise)
-          life: 1,
-          decay: rand(0.02, 0.05),
-          size: rand(2, 6),
-          type: 'flame',
-        };
-        if (particles.length >= MAX_PARTICLES) {
-          const oldest = particles.reduce((minIdx, pp, idx, arr) =>
-            pp.life < arr[minIdx].life ? idx : minIdx, 0);
-          particles[oldest] = p;
-        } else {
-          particles.push(p);
+    let drawnIdx = 0;
+    let phase: 'draw' | 'hold' | 'fade' = 'draw';
+    let phaseStart = performance.now();
+    let animId = 0;
+
+    function inkSegment(i: number) {
+      const a = pts[i - 1], b = pts[i];
+      const lw = widths[i];
+
+      // Fiery outer glow
+      inkCtx.strokeStyle = `rgba(${FIRE.r}, ${FIRE.g}, ${FIRE.b}, 0.10)`;
+      inkCtx.lineWidth = lw * 3.6 + 10;
+      inkCtx.shadowColor = `rgba(${FIRE.r}, ${FIRE.g}, ${FIRE.b}, 0.45)`;
+      inkCtx.shadowBlur = 30;
+      inkCtx.beginPath();
+      inkCtx.moveTo(a.x, a.y);
+      inkCtx.lineTo(b.x, b.y);
+      inkCtx.stroke();
+
+      // Main gold body
+      inkCtx.strokeStyle = `rgba(${GOLD.r}, ${GOLD.g}, ${GOLD.b}, 0.88)`;
+      inkCtx.lineWidth = lw;
+      inkCtx.shadowColor = `rgba(${GOLD.r}, ${GOLD.g}, ${GOLD.b}, 0.75)`;
+      inkCtx.shadowBlur = 15;
+      inkCtx.beginPath();
+      inkCtx.moveTo(a.x, a.y);
+      inkCtx.lineTo(b.x, b.y);
+      inkCtx.stroke();
+
+      // Bright warm-white core
+      inkCtx.strokeStyle = `rgba(${GOLD_CORE.r}, ${GOLD_CORE.g}, ${GOLD_CORE.b}, 0.92)`;
+      inkCtx.lineWidth = Math.max(0.6, lw * 0.38);
+      inkCtx.shadowColor = `rgba(${GOLD_CORE.r}, ${GOLD_CORE.g}, ${GOLD_CORE.b}, 0.85)`;
+      inkCtx.shadowBlur = 6;
+      inkCtx.beginPath();
+      inkCtx.moveTo(a.x, a.y);
+      inkCtx.lineTo(b.x, b.y);
+      inkCtx.stroke();
+    }
+
+    function addParticle(p: Particle) {
+      if (particles.length >= MAX_PARTICLES) {
+        let oldest = 0;
+        for (let j = 1; j < particles.length; j++) {
+          if (particles[j].life < particles[oldest].life) oldest = j;
         }
-      }
-      // Tiny hot embers that shoot further
-      for (let i = 0; i < EMBER_EMIT_RATE; i++) {
-        const angle = rand(0, Math.PI * 2);
-        const speed = rand(2, 5);
-        const p: Particle = {
-          x, y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - rand(1, 3),
-          life: 1,
-          decay: rand(0.03, 0.07),
-          size: rand(0.8, 1.8),
-          type: 'ember',
-        };
-        if (particles.length >= MAX_PARTICLES) {
-          const oldest = particles.reduce((minIdx, pp, idx, arr) =>
-            pp.life < arr[minIdx].life ? idx : minIdx, 0);
-          particles[oldest] = p;
-        } else {
-          particles.push(p);
-        }
+        particles[oldest] = p;
+      } else {
+        particles.push(p);
       }
     }
 
-    // ─── Update + draw particles ───
-    function updateAndDrawParticles(ctx: CanvasRenderingContext2D, globalAlpha: number) {
+    function emitAt(x: number, y: number, dust: number, embers: number, stars: number) {
+      for (let i = 0; i < dust; i++) {
+        addParticle({
+          x: x + rand(-4, 4), y: y + rand(-4, 4),
+          vx: rand(-0.8, 0.8), vy: rand(-0.4, 1),
+          life: 1, decay: rand(0.007, 0.02),
+          size: rand(0.6, 2.2), phase: rand(0, Math.PI * 2),
+          kind: 'dust',
+        });
+      }
+      for (let i = 0; i < embers; i++) {
+        const ang = rand(0, Math.PI * 2);
+        const spd = rand(0.6, 2.8);
+        addParticle({
+          x: x + rand(-3, 3), y: y + rand(-3, 3),
+          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - rand(0.6, 1.8),
+          life: 1, decay: rand(0.014, 0.035),
+          size: rand(1, 3), phase: rand(0, Math.PI * 2),
+          kind: 'ember',
+        });
+      }
+      for (let i = 0; i < stars; i++) {
+        addParticle({
+          x: x + rand(-8, 8), y: y + rand(-8, 8),
+          vx: rand(-0.4, 0.4), vy: rand(-0.5, 0.3),
+          life: 1, decay: rand(0.012, 0.025),
+          size: rand(1.4, 2.8), phase: rand(0, Math.PI * 2),
+          kind: 'star',
+        });
+      }
+    }
+
+    function drawStar(c: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number) {
+      c.strokeStyle = `rgba(${GOLD_CORE.r}, ${GOLD_CORE.g}, ${GOLD_CORE.b}, ${alpha})`;
+      c.lineWidth = 0.9;
+      c.shadowColor = `rgba(${GOLD.r}, ${GOLD.g}, ${GOLD.b}, ${alpha})`;
+      c.shadowBlur = 6;
+      c.beginPath();
+      c.moveTo(x - r, y); c.lineTo(x + r, y);
+      c.moveTo(x, y - r); c.lineTo(x, y + r);
+      c.moveTo(x - r * 0.45, y - r * 0.45); c.lineTo(x + r * 0.45, y + r * 0.45);
+      c.moveTo(x + r * 0.45, y - r * 0.45); c.lineTo(x - r * 0.45, y + r * 0.45);
+      c.stroke();
+    }
+
+    function updateAndDrawParticles(now: number, globalAlpha: number) {
+      if (!ctx) return;
+      ctx.save();
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vx *= 0.96;
-        p.vy *= 0.96;
-        p.vy -= 0.03; // slight upward drift (heat rises)
-        p.life -= p.decay;
-
-        if (p.life <= 0) {
-          particles.splice(i, 1);
-          continue;
+        p.vx *= 0.98;
+        if (p.kind === 'ember') {
+          p.vy = p.vy * 0.97 - 0.045; // heat rises
+        } else {
+          p.vy = p.vy * 0.985 + 0.012; // dust settles
         }
+        p.life -= p.decay;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
 
-        ctx.save();
-        ctx.globalAlpha = globalAlpha;
+        const twinkle = 0.55 + 0.45 * Math.sin(now * 0.014 + p.phase);
+        const a = p.life * twinkle * globalAlpha;
 
-        if (p.type === 'flame') {
-          // Flame particles — large, soft, fiery
-          ctx.shadowColor = fireShadowColor(p.life);
-          ctx.shadowBlur = 12;
-          ctx.fillStyle = fireColor(p.life);
+        if (p.kind === 'star') {
+          drawStar(ctx, p.x, p.y, p.size * 3.2 * p.life, a);
+        } else if (p.kind === 'ember') {
+          ctx.fillStyle = emberColor(p.life, a);
+          ctx.shadowColor = emberColor(p.life, a * 0.9);
+          ctx.shadowBlur = 8;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
           ctx.fill();
         } else {
-          // Ember — tiny bright spark
-          const alpha = p.life * p.life;
-          ctx.shadowColor = `rgba(255, 200, 50, ${alpha * 0.8})`;
+          ctx.fillStyle = `rgba(${GOLD.r}, ${GOLD.g}, ${GOLD.b}, ${a})`;
+          ctx.shadowColor = `rgba(${GOLD.r}, ${GOLD.g}, ${GOLD.b}, ${a * 0.8})`;
           ctx.shadowBlur = 4;
-          ctx.fillStyle = `rgba(255, 240, 180, ${alpha})`;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
           ctx.fill();
         }
-
-        ctx.restore();
       }
-    }
-
-    // ─── Draw the glowing trail ───
-    function drawTrail(
-      ctx: CanvasRenderingContext2D,
-      revealIdx: number,
-      globalAlpha: number,
-    ) {
-      if (revealIdx < 1) return;
-
-      ctx.save();
-      ctx.globalAlpha = globalAlpha;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      for (let i = 1; i <= revealIdx && i < sampledPts.length; i++) {
-        const t = i / SAMPLE_COUNT;
-        const color = getTrailColor(t);
-
-        // Proximity to head — near head is brighter/hotter
-        const headProximity = 1 - Math.abs(revealIdx - i) / Math.max(1, revealIdx);
-        const tailFade = Math.pow(1 - (revealIdx - i) / Math.max(1, revealIdx), 0.35);
-
-        // Layer 1: Wide warm outer glow
-        ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${(0.05 * tailFade).toFixed(4)})`;
-        ctx.lineWidth = 24;
-        ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, ${(0.12 * tailFade).toFixed(4)})`;
-        ctx.shadowBlur = 35;
-        ctx.beginPath();
-        ctx.moveTo(sampledPts[i - 1].x, sampledPts[i - 1].y);
-        ctx.lineTo(sampledPts[i].x, sampledPts[i].y);
-        ctx.stroke();
-
-        // Layer 2: Medium color glow — hotter near head
-        const midAlpha = headProximity > 0.85 ? 0.35 : 0.15;
-        ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${(midAlpha * tailFade).toFixed(4)})`;
-        ctx.lineWidth = 5;
-        ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.35)`;
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.moveTo(sampledPts[i - 1].x, sampledPts[i - 1].y);
-        ctx.lineTo(sampledPts[i].x, sampledPts[i].y);
-        ctx.stroke();
-
-        // Layer 3: Thin bright core
-        const coreAlpha = headProximity > 0.9 ? 0.95 : 0.7;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${(coreAlpha * tailFade).toFixed(4)})`;
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = `rgba(255, 200, 100, 0.6)`;
-        ctx.shadowBlur = 6;
-        ctx.beginPath();
-        ctx.moveTo(sampledPts[i - 1].x, sampledPts[i - 1].y);
-        ctx.lineTo(sampledPts[i].x, sampledPts[i].y);
-        ctx.stroke();
-      }
-
       ctx.restore();
     }
 
-    // ─── Draw the fireball head ───
-    function drawFireball(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    function drawPenHead(x: number, y: number, now: number) {
+      if (!ctx) return;
       ctx.save();
+      const pulse = 1 + 0.12 * Math.sin(now * 0.022);
 
-      // Layer 1: Very large soft outer fire glow
-      ctx.shadowColor = 'rgba(255, 150, 30, 0.9)';
-      ctx.shadowBlur = 60;
-      const outerGrad = ctx.createRadialGradient(x, y, 0, x, y, 40);
-      outerGrad.addColorStop(0, 'rgba(255, 255, 220, 0.9)');
-      outerGrad.addColorStop(0.15, 'rgba(255, 220, 80, 0.7)');
-      outerGrad.addColorStop(0.35, 'rgba(255, 150, 30, 0.4)');
-      outerGrad.addColorStop(0.6, 'rgba(255, 80, 10, 0.15)');
-      outerGrad.addColorStop(1, 'rgba(200, 30, 0, 0)');
-      ctx.fillStyle = outerGrad;
+      // Fiery halo
+      const halo = ctx.createRadialGradient(x, y, 0, x, y, 42 * pulse);
+      halo.addColorStop(0, `rgba(${GOLD_CORE.r}, ${GOLD_CORE.g}, ${GOLD_CORE.b}, 0.95)`);
+      halo.addColorStop(0.18, `rgba(255, 215, 120, 0.6)`);
+      halo.addColorStop(0.45, `rgba(${FIRE.r}, ${FIRE.g}, ${FIRE.b}, 0.25)`);
+      halo.addColorStop(0.75, 'rgba(220, 70, 15, 0.08)');
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
       ctx.beginPath();
-      ctx.arc(x, y, 40, 0, Math.PI * 2);
+      ctx.arc(x, y, 42 * pulse, 0, Math.PI * 2);
       ctx.fill();
 
-      // Layer 2: Medium hot core
-      ctx.shadowColor = 'rgba(255, 200, 50, 0.95)';
-      ctx.shadowBlur = 30;
-      const midGrad = ctx.createRadialGradient(x, y, 0, x, y, 14);
-      midGrad.addColorStop(0, 'rgba(255, 255, 240, 0.95)');
-      midGrad.addColorStop(0.4, 'rgba(255, 230, 100, 0.8)');
-      midGrad.addColorStop(0.7, 'rgba(255, 180, 40, 0.4)');
-      midGrad.addColorStop(1, 'rgba(255, 120, 20, 0)');
-      ctx.fillStyle = midGrad;
-      ctx.beginPath();
-      ctx.arc(x, y, 14, 0, Math.PI * 2);
-      ctx.fill();
+      // Star flare — elegant cross of light
+      const flareLen = 30 * pulse;
+      const grad = (x1: number, y1: number, x2: number, y2: number) => {
+        const g = ctx.createLinearGradient(x1, y1, x2, y2);
+        g.addColorStop(0, 'rgba(255,250,235,0)');
+        g.addColorStop(0.5, 'rgba(255,250,235,0.9)');
+        g.addColorStop(1, 'rgba(255,250,235,0)');
+        return g;
+      };
+      ctx.lineWidth = 1.3;
+      ctx.strokeStyle = grad(x - flareLen, y, x + flareLen, y);
+      ctx.beginPath(); ctx.moveTo(x - flareLen, y); ctx.lineTo(x + flareLen, y); ctx.stroke();
+      ctx.strokeStyle = grad(x, y - flareLen, x, y + flareLen);
+      ctx.beginPath(); ctx.moveTo(x, y - flareLen); ctx.lineTo(x, y + flareLen); ctx.stroke();
 
-      // Layer 3: Bright white-hot inner core
-      ctx.shadowColor = 'rgba(255, 255, 200, 1)';
-      ctx.shadowBlur = 15;
-      ctx.fillStyle = 'rgba(255, 255, 250, 0.97)';
+      // Bright core
+      ctx.shadowColor = `rgba(${GOLD_CORE.r}, ${GOLD_CORE.g}, ${GOLD_CORE.b}, 1)`;
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = 'rgba(255, 253, 245, 0.98)';
       ctx.beginPath();
       ctx.arc(x, y, 3, 0, Math.PI * 2);
       ctx.fill();
-
       ctx.restore();
     }
 
-    // ─── Animation loop ───
     function tick(now: number) {
       if (!canvas || !ctx) return;
-
       const phaseElapsed = now - phaseStart;
       ctx.clearRect(0, 0, w, h);
 
       if (phase === 'draw') {
         const rawT = Math.min(1, phaseElapsed / DRAW_DURATION_MS);
         const t = rawT < 0.5
-          ? 2 * rawT * rawT
-          : 1 - Math.pow(-2 * rawT + 2, 2) / 2;
+          ? 4 * rawT * rawT * rawT
+          : 1 - Math.pow(-2 * rawT + 2, 3) / 2;
+        const targetIdx = Math.floor(t * SAMPLE_COUNT);
 
-        const revealIdx = Math.floor(t * SAMPLE_COUNT);
-
-        drawTrail(ctx, revealIdx, 1);
-
-        if (revealIdx < SAMPLE_COUNT) {
-          const headPt = sampledPts[Math.min(revealIdx, SAMPLE_COUNT)];
-          drawFireball(ctx, headPt.x, headPt.y);
-          emitFireParticles(headPt.x, headPt.y);
+        while (drawnIdx < targetIdx && drawnIdx < pts.length - 1) {
+          drawnIdx++;
+          inkSegment(drawnIdx);
         }
 
-        updateAndDrawParticles(ctx, 1);
+        ctx.drawImage(ink, 0, 0, w, h);
+
+        if (drawnIdx < SAMPLE_COUNT) {
+          const head = pts[Math.min(drawnIdx, pts.length - 1)];
+          drawPenHead(head.x, head.y, now);
+          emitAt(head.x, head.y, 2, 3, Math.random() < 0.3 ? 1 : 0);
+        }
+        // Shimmer sparkles along the already-drawn stroke
+        if (drawnIdx > 10 && Math.random() < 0.5) {
+          const sp = pts[Math.floor(rand(0, drawnIdx))];
+          emitAt(sp.x, sp.y, 1, Math.random() < 0.4 ? 1 : 0, Math.random() < 0.25 ? 1 : 0);
+        }
+        updateAndDrawParticles(now, 1);
 
         if (rawT >= 1) {
           phase = 'hold';
           phaseStart = now;
         }
       } else if (phase === 'hold') {
-        drawTrail(ctx, SAMPLE_COUNT, 1);
-        updateAndDrawParticles(ctx, 1);
+        ctx.drawImage(ink, 0, 0, w, h);
+        if (Math.random() < 0.6) {
+          const sp = pts[Math.floor(rand(0, pts.length - 1))];
+          emitAt(sp.x, sp.y, 1, 1, Math.random() < 0.3 ? 1 : 0);
+        }
+        updateAndDrawParticles(now, 1);
 
         if (phaseElapsed >= HOLD_DURATION_MS) {
           phase = 'fade';
           phaseStart = now;
         }
-      } else if (phase === 'fade') {
+      } else {
         const fadeProgress = Math.min(1, phaseElapsed / FADE_DURATION_MS);
         const eased = 1 - Math.pow(1 - fadeProgress, 3);
         const alpha = 1 - eased;
 
         setOpacity(alpha);
-        drawTrail(ctx, SAMPLE_COUNT, alpha);
-        updateAndDrawParticles(ctx, alpha);
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(ink, 0, 0, w, h);
+        ctx.globalAlpha = 1;
+        updateAndDrawParticles(now, alpha);
 
         if (fadeProgress >= 1) {
           handleComplete();
@@ -487,6 +437,7 @@ export default function LightTrails({ onComplete }: Props) {
   return (
     <canvas
       ref={canvasRef}
+      data-testid="light-trails-canvas"
       style={{
         position: 'fixed',
         inset: 0,
