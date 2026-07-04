@@ -16,7 +16,7 @@ User: the intro light trail on page load looked ugly and didn't resemble an "N".
   - Single champagne-gold palette (rgb 232,196,132) with warm-white core, 3-layer glow
   - Offscreen ink canvas accumulates stroke (perf), glowing pen head with pulsing halo + 4-point star flare, gold-dust twinkle particles with gentle gravity
   - Phases: draw 3.6s (easeInOutCubic) → hold 650ms w/ shimmer → fade 1.3s → onComplete unmounts
-  - Iteration 2 (user request): trail enters from bottom-left screen corner, exits via top flourish to top-left corner; added fiery look (orange outer glow FIRE rgb 255,130,35, rising ember particles with white→orange→red life colors, more star sparkles along stroke, 260 max particles)
+  - Iteration 2-3 (user request): trail enters from bottom-left screen corner, final upstroke continues and exits at the TOP-RIGHT corner; added fiery look (orange outer glow FIRE rgb 255,130,35, rising ember particles with white→orange→red life colors, more star sparkles along stroke, 260 max particles)
   - Verified via screenshots: renders as elegant fiery cursive N, corner-to-corner, draws once, vanishes.
 
 ## Backlog / Next

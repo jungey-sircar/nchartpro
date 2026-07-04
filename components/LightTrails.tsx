@@ -38,7 +38,7 @@ function sampleCursiveN(w: number, h: number): { pts: Pt[]; widths: number[] } {
   const toGX = (sx: number) => (sx - offX) / scale;
   const toGY = (sy: number) => (sy - offY) / scale;
   const blx = toGX(-40), bly = toGY(h + 40);   // bottom-left corner
-  const tlx = toGX(-40), tly = toGY(-40);       // top-left corner
+  const trx = toGX(w + 40), try_ = toGY(-40);  // top-right corner
 
   const f = (n: number) => n.toFixed(2);
 
@@ -54,10 +54,8 @@ function sampleCursiveN(w: number, h: number): { pts: Pt[]; widths: number[] } {
     'C 57 78.5, 61 84, 65 79.5 ' +
     'C 71 72, 76.5 51, 80.5 31 ' +
     'C 82.5 21, 84.5 13.5, 88.5 12 ' +
-    // Exit flourish: tight crest, then a wave sweeping left to top-left corner
-    'C 90.5 10.5, 90 6, 84.5 4.5 ' +
-    'C 76 2.2, 66 0, 52 -3.5 ' +
-    `C ${f(20)} ${f(-11)}, ${f(tlx + (52 - tlx) * 0.35)} ${f(tly + 6)}, ${f(tlx)} ${f(tly)}`;
+    // Exit flourish: continue the upstroke, soaring off to the top-right corner
+    `C ${f(92)} ${f(10)}, ${f(88.5 + (trx - 88.5) * 0.35)} ${f(6)}, ${f(trx)} ${f(try_)}`;
 
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
