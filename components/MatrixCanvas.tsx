@@ -7,8 +7,8 @@ import { type Theme } from './ThemeProvider';
 // SPEED & SIZE CONTROLS
 // ═══════════════════════════════════════════════════════════════════
 const STEP_MS          = 30;   // ms between animation ticks
-const STREAM_SPEED_MIN = 0.3;  // px per tick (min) — slow drifters
-const STREAM_SPEED_MAX = 1.4;  // px per tick (max) — still gentle
+const STREAM_SPEED_MIN = 0.4;  // px per tick (min) — slow drifters
+const STREAM_SPEED_MAX = 2.8;  // px per tick (max) — some zip fast
 
 const SPARK_CHANCE     = 0.018; // ~2% chance per candle per tick to spark
 
@@ -151,6 +151,25 @@ export default function MatrixCanvas({ theme }: Props) {
       for (const s of streams) {
         let curY = s.y;
 
+        // ── Matrix glow trail: vertical gradient line behind the stream ──
+        const streamH = streamTotalHeight(s);
+        const trailTopY = s.y - streamH * 0.3;
+        const trailBotY = s.y + streamH;
+        if (trailBotY >= 0 && trailTopY <= h) {
+          const trailGrad = ctx.createLinearGradient(s.x, Math.max(0, trailTopY), s.x, Math.min(h, trailBotY));
+          const trailColor = s.candles[0].up ? pal.up : pal.down;
+          trailGrad.addColorStop(0, 'rgba(0,0,0,0)');
+          trailGrad.addColorStop(0.3, colorWithAlpha(trailColor, s.brightness * 0.12));
+          trailGrad.addColorStop(0.7, colorWithAlpha(trailColor, s.brightness * 0.25));
+          trailGrad.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.strokeStyle = trailGrad;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(s.x, Math.max(0, trailTopY));
+          ctx.lineTo(s.x, Math.min(h, trailBotY));
+          ctx.stroke();
+        }
+
         for (let ci = 0; ci < s.candles.length; ci++) {
           const c = s.candles[ci];
           const fullH = candleFullH(c);
@@ -176,6 +195,15 @@ export default function MatrixCanvas({ theme }: Props) {
               : colorWithAlpha(pal.down, alpha);
             const wickColor = colorWithAlpha(pal.wick, alpha * 0.7);
 
+            // ── Matrix glow on the leading candle ──
+            if (ci === 0) {
+              ctx.save();
+              ctx.shadowColor = c.up
+                ? `rgba(52, 211, 153, ${(alpha * 1.5).toFixed(2)})`
+                : `rgba(248, 113, 113, ${(alpha * 1.5).toFixed(2)})`;
+              ctx.shadowBlur = 16;
+            }
+
             // Draw wick (thin vertical line through center)
             ctx.strokeStyle = wickColor;
             ctx.lineWidth   = WICK_W;
@@ -192,6 +220,39 @@ export default function MatrixCanvas({ theme }: Props) {
               CANDLE_W,
               c.bodyH,
             );
+
+            // ── Random body shine — some candle bodies glow bright ──
+            const isBodyShining = Math.random() < 0.10;
+            if (isBodyShining) {
+              ctx.save();
+              ctx.shadowColor = c.up
+                ? 'rgba(52, 211, 153, 0.9)'
+                : 'rgba(248, 113, 113, 0.9)';
+              ctx.shadowBlur = 22;
+              ctx.fillStyle = c.up
+                ? `rgba(120, 255, 200, ${Math.min(1, alpha * 3).toFixed(2)})`
+                : `rgba(255, 160, 160, ${Math.min(1, alpha * 3).toFixed(2)})`;
+              ctx.fillRect(
+                cx - CANDLE_W / 2,
+                bodyTopY,
+                CANDLE_W,
+                c.bodyH,
+              );
+              // Bright inner core
+              ctx.shadowBlur = 8;
+              ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.7, alpha * 2).toFixed(2)})`;
+              ctx.fillRect(
+                cx - CANDLE_W / 4,
+                bodyTopY + c.bodyH * 0.15,
+                CANDLE_W / 2,
+                c.bodyH * 0.7,
+              );
+              ctx.restore();
+            }
+
+            if (ci === 0) {
+              ctx.restore();
+            }
 
             // ── Fire spark at the wick tip ──
             if (isSparking) {
