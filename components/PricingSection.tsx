@@ -90,15 +90,6 @@ const TIERS: Tier[] = [
   },
 ];
 
-// Ghost duplicate of Beginner so page-flip has a page after Pro to flip to
-const TIERS_WITH_GHOST: Tier[] = [
-  ...TIERS,
-  { ...TIERS[1], id: 'beginner-ghost' },
-];
-
-// The real tiers (for dots/navigation) — excludes ghost
-const REAL_TIER_COUNT = TIERS.length;
-
 // Integration point — wire to eSewa payment flow when ready
 export function handleSubscribeClick(tierId: string) {
   console.log(`Subscribe clicked for tier: ${tierId}`);
@@ -144,18 +135,7 @@ export default function PricingSection() {
       pf.loadFromHTML(pages);
 
       pf.on('flip', (e: any) => {
-        const landedPage = e.data;
-        // If user flipped to the ghost Beginner page (last), redirect to real Beginner
-        if (landedPage >= REAL_TIER_COUNT) {
-          setCurrentPage(1); // Beginner
-          setTimeout(() => {
-            if (pageFlipRef.current) {
-              pageFlipRef.current.turnToPage(1);
-            }
-          }, 100);
-        } else {
-          setCurrentPage(landedPage);
-        }
+        setCurrentPage(e.data);
       });
 
       pageFlipRef.current = pf;
@@ -181,9 +161,10 @@ export default function PricingSection() {
     const pf = pageFlipRef.current;
     if (!pf || !isFlipReady) return;
     const current = pf.getCurrentPageIndex();
-    // If on Pro (last real page), flip forward to ghost which then auto-redirects to Beginner
-    if (current >= REAL_TIER_COUNT - 1) {
-      pf.flipNext('bottom');
+    const total   = pf.getPageCount();
+    if (current >= total - 1) {
+      // Wrap to first page
+      pf.flip(0, 'bottom');
     } else {
       pf.flipNext('bottom');
     }
@@ -222,12 +203,9 @@ export default function PricingSection() {
   return (
     <section
       id="pricing"
-      data-scroll-3d="pricing-rotate"
       style={{
         padding: '5.5rem 4rem 6rem',
         minHeight: '80vh',
-        transformOrigin: 'center center',
-        willChange: 'transform, opacity',
       }}
     >
       {/* Heading */}
@@ -306,7 +284,7 @@ export default function PricingSection() {
               ref={bookRef}
               className="pricing-book"
             >
-              {TIERS_WITH_GHOST.map(t => (
+              {TIERS.map((t, i) => (
                 <div
                   key={t.id}
                   className="pricing-page"
@@ -426,7 +404,6 @@ export default function PricingSection() {
                   background: i === currentPage ? 'var(--accent)' : 'var(--border)',
                   cursor: 'pointer', padding: 0,
                   transition: 'all 0.2s ease',
-                  opacity: 1,
                 }}
               />
             ))}

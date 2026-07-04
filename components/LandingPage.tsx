@@ -4,14 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from './ThemeProvider';
 import Header from './Header';
 import HeroSection from './HeroSection';
-import GlassCardsSection from './GlassCardsSection';
-import PricingSection from './PricingSection';
 import Footer from './Footer';
 import AuthModal, { type AuthUser } from './AuthModal';
 import MatrixCanvas from './MatrixCanvas';
 import LightTrails from './LightTrails';
 import ScrollPerspective from './ScrollPerspective';
 import CanvasCursor from './CanvasCursor';
+import Immersive3DScene from './Immersive3DScene';
+import PricingSection from './PricingSection';
 
 export default function LandingPage() {
   const { theme } = useTheme();
@@ -103,7 +103,7 @@ export default function LandingPage() {
       <main style={{ paddingTop: 48, paddingBottom: 38 }}>
         <ScrollPerspective>
           <HeroSection theme={theme} />
-          <GlassCardsSection />
+          <Immersive3DScene />
           <PricingSection />
         </ScrollPerspective>
       </main>

@@ -1,11 +1,11 @@
 'use client';
 
+import { useRef, useCallback } from 'react';
 
 interface CardData {
   slogan: string;
   description: string;
   emoji: string;
-  side: 'left' | 'right';
 }
 
 const CARDS: CardData[] = [
@@ -14,112 +14,143 @@ const CARDS: CardData[] = [
     description:
       'Real-time candlestick charts with advanced indicators — MACD, RSI, Bollinger Bands, and more — keep you precisely ahead of the market at every moment.',
     emoji: '📈',
-    side: 'left',
   },
   {
     slogan: 'Filter the Noise',
     description:
       'Powerful multi-factor screening tools let you cut through thousands of instruments instantly and surface exactly what matters to your strategy.',
     emoji: '🔍',
-    side: 'right',
   },
   {
     slogan: 'AI-Powered Insights',
     description:
       "NChartPro's MCP module calls frontier AI to analyze your charts, flag patterns, and generate human-readable market commentary — in real time.",
     emoji: '🤖',
-    side: 'left',
   },
   {
     slogan: 'Portfolio at a Glance',
     description:
       'Monitor every position, P&L, and exposure across all your holdings in a single compact dashboard that updates live with every tick.',
     emoji: '💼',
-    side: 'right',
   },
 ];
 
+const TILT_MAX = 18; // max tilt degrees on hover
 
+function Feature3DCard({ data, index }: { data: CardData; index: number }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
 
-function GlassCard({ data }: { data: CardData }) {
-  const isLeft = data.side === 'left';
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const card = cardRef.current;
+    const glow = glowRef.current;
+    if (!card || !glow) return;
+    const rect = card.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rotateY = (x - 0.5) * TILT_MAX;
+    const rotateX = (0.5 - y) * TILT_MAX;
 
-  // Card element
-  const cardEl = (
+    card.style.transform = `perspective(600px) rotateX(${rotateX.toFixed(1)}deg) rotateY(${rotateY.toFixed(1)}deg) scale(1.04)`;
+    glow.style.background = `radial-gradient(circle at ${(x * 100).toFixed(0)}% ${(y * 100).toFixed(0)}%, rgba(99, 102, 241, 0.18) 0%, transparent 60%)`;
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    const card = cardRef.current;
+    const glow = glowRef.current;
+    if (card) card.style.transform = 'perspective(600px) rotateX(0) rotateY(0) scale(1)';
+    if (glow) glow.style.background = 'transparent';
+  }, []);
+
+  // Stagger animation delay per card
+  const isLeftCol = index % 2 === 0;
+  const row = Math.floor(index / 2);
+
+  return (
     <div
+      data-scroll-3d={isLeftCol ? 'card-depth-left' : 'card-depth-right'}
       style={{
-        display: 'flex',
-        justifyContent: isLeft ? 'flex-end' : 'flex-start',
-        paddingRight: isLeft ? '3rem' : 0,
-        paddingLeft: isLeft ? 0 : '3rem',
+        transformOrigin: isLeftCol ? 'left center' : 'right center',
+        willChange: 'transform, opacity',
+        // Stagger: offset right-column cards down
+        marginTop: !isLeftCol && row === 0 ? '3rem' : 0,
       }}
     >
       <div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         className="glass-card"
         style={{
-          width: 'clamp(180px, 22vw, 280px)',
-          aspectRatio: '1 / 1',
+          position: 'relative',
+          overflow: 'hidden',
+          padding: '2.25rem 2rem',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1.75rem',
-          textAlign: 'center',
-          gap: '0.875rem',
+          gap: '1rem',
+          cursor: 'default',
+          transition: 'transform 0.2s ease-out, box-shadow 0.3s ease',
+          transformStyle: 'preserve-3d',
+          minHeight: 240,
         }}
       >
-        <span style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', lineHeight: 1 }}>{data.emoji}</span>
+        {/* Hover glow overlay */}
+        <div
+          ref={glowRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 'inherit',
+            pointerEvents: 'none',
+            transition: 'background 0.15s ease',
+            zIndex: 0,
+          }}
+        />
+
+        {/* Content */}
+        <span style={{
+          fontSize: 'clamp(2.5rem, 4vw, 3.5rem)',
+          lineHeight: 1,
+          position: 'relative',
+          zIndex: 1,
+        }}>
+          {data.emoji}
+        </span>
+
         <h3 style={{
           margin: 0,
           fontSize: 'var(--fs-xl)',
           fontWeight: 700,
           color: 'var(--accent)',
           letterSpacing: '-0.02em',
+          position: 'relative',
+          zIndex: 1,
         }}>
           {data.slogan}
         </h3>
+
+        <p style={{
+          margin: 0,
+          fontSize: 'var(--fs-sm)',
+          lineHeight: 1.75,
+          color: 'var(--text-secondary)',
+          position: 'relative',
+          zIndex: 1,
+        }}>
+          {data.description}
+        </p>
+
+        {/* Bottom accent line */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: '10%',
+          right: '10%',
+          height: 2,
+          background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
+          opacity: 0.4,
+        }} />
       </div>
-    </div>
-  );
-
-  // Description element
-  const descEl = (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: isLeft ? 'flex-start' : 'flex-end',
-        paddingLeft: isLeft ? '3rem' : 0,
-        paddingRight: isLeft ? 0 : '3rem',
-      }}
-    >
-      <p style={{
-        margin: 0,
-        fontSize: 'var(--fs-md)',
-        lineHeight: 1.75,
-        color: 'var(--text-secondary)',
-        maxWidth: 420,
-      }}>
-        {data.description}
-      </p>
-    </div>
-  );
-
-  return (
-    <div
-      data-scroll-3d={isLeft ? 'card-depth-left' : 'card-depth-right'}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        width: '100%',
-        position: 'relative',
-        zIndex: 1,
-        transformOrigin: isLeft ? 'left center' : 'right center',
-        willChange: 'transform, opacity',
-      }}
-    >
-      {isLeft ? cardEl : descEl}
-      {isLeft ? descEl : cardEl}
     </div>
   );
 }
@@ -130,30 +161,21 @@ export default function GlassCardsSection() {
       id="features"
       style={{
         position: 'relative',
-        padding: '5rem 4rem 6rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4.5rem',
+        padding: '5rem 4rem 3rem',
         transformStyle: 'preserve-3d',
       }}
     >
-      {/* Dashed vertical spine connecting all cards — timeline style */}
+      {/* Section heading */}
       <div
-        aria-hidden
+        data-scroll-3d="fade-up"
         style={{
-          position: 'absolute',
-          left: '50%',
-          top: '10rem',        // starts below heading
-          bottom: '4rem',
-          width: 0,
-          borderLeft: '2px dashed var(--border-dash)',
-          transform: 'translateX(-50%)',
-          pointerEvents: 'none',
-          zIndex: 0,
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 1,
+          willChange: 'transform, opacity',
+          marginBottom: '3.5rem',
         }}
-      />
-
-      <div data-scroll-3d="fade-up" style={{ textAlign: 'center', position: 'relative', zIndex: 1, willChange: 'transform, opacity' }}>
+      >
         <h2
           className="gradient-text"
           style={{
@@ -165,11 +187,27 @@ export default function GlassCardsSection() {
         >
           Why NChartPro?
         </h2>
+        <p style={{
+          marginTop: '0.875rem',
+          fontSize: 'var(--fs-md)',
+          color: 'var(--text-secondary)',
+        }}>
+          Premium tools for the Nepali market.
+        </p>
       </div>
 
-      {CARDS.map(card => (
-        <GlassCard key={card.slogan} data={card} />
-      ))}
+      {/* 2-column staggered card grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '2rem',
+        maxWidth: 900,
+        margin: '0 auto',
+      }}>
+        {CARDS.map((card, i) => (
+          <Feature3DCard key={card.slogan} data={card} index={i} />
+        ))}
+      </div>
     </section>
   );
 }

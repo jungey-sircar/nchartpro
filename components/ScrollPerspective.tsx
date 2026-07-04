@@ -105,6 +105,35 @@ export default function ScrollPerspective({ children }: { children: ReactNode })
       const isCardLeft = preset === 'card-depth-left';
       const isCardRight = preset === 'card-depth-right';
       const isPricing = preset === 'pricing-rotate';
+      const isCylinder = preset === 'cylinder-spin';
+
+      if (isCylinder) {
+        // Cylinder: gentle scale + fade, no rotation (it rotates itself)
+        if (distFromCenter > 0) {
+          const t = smoothstep(1 - clamp(distFromCenter / ENTRY_DISTANCE, 0, 1));
+          el.style.transform = transform3d({
+            z: lerp(FAR_Z * 0.6, 0, t),
+            y: lerp(80, 0, t),
+            scale: lerp(0.6, 1, t),
+            rotateX: 0,
+            rotateY: 0,
+          });
+          el.style.opacity = String(clamp((t - 0.04) / 0.82, 0, 1));
+          el.style.filter = `blur(${lerp(6, 0, t).toFixed(2)}px)`;
+        } else {
+          const t = smoothstep(clamp(-distFromCenter / EXIT_DISTANCE, 0, 1));
+          el.style.transform = transform3d({
+            z: lerp(0, EXIT_Z * 0.5, t),
+            y: lerp(0, -60, t),
+            scale: lerp(1, 0.85, t),
+            rotateX: 0,
+            rotateY: 0,
+          });
+          el.style.opacity = String(lerp(1, 0.2, t));
+          el.style.filter = `blur(${lerp(0, 3, t).toFixed(2)}px)`;
+        }
+        continue;
+      }
 
       if (distFromCenter > 0) {
         const t = smoothstep(1 - clamp(distFromCenter / ENTRY_DISTANCE, 0, 1));
