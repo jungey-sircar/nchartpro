@@ -10,6 +10,8 @@ import Footer from './Footer';
 import AuthModal, { type AuthUser } from './AuthModal';
 import MatrixCanvas from './MatrixCanvas';
 import LightTrails from './LightTrails';
+import ScrollPerspective from './ScrollPerspective';
+import CanvasCursor from './CanvasCursor';
 
 export default function LandingPage() {
   const { theme } = useTheme();
@@ -99,9 +101,11 @@ export default function LandingPage() {
 
       {/* Main content — padded top for header, padded bottom for sticky footer */}
       <main style={{ paddingTop: 48, paddingBottom: 38 }}>
-        <HeroSection theme={theme} />
-        <GlassCardsSection />
-        <PricingSection />
+        <ScrollPerspective>
+          <HeroSection theme={theme} />
+          <GlassCardsSection />
+          <PricingSection />
+        </ScrollPerspective>
       </main>
 
       {/* Fixed single-line footer — 38px height */}
@@ -113,6 +117,9 @@ export default function LandingPage() {
 
       {/* Cinematic light-trail intro — plays once, then unmounts */}
       {showTrails && <LightTrails onComplete={() => setShowTrails(false)} />}
+
+      {/* Canvas cursor trail effect */}
+      <CanvasCursor />
     </>
   );
 }

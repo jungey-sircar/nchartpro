@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 
 interface CardData {
   slogan: string;
@@ -40,25 +39,9 @@ const CARDS: CardData[] = [
   },
 ];
 
-function useScrollReveal(ref: React.RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) { el.classList.add('visible'); obs.unobserve(el); }
-      },
-      { threshold: 0.2 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [ref]);
-}
 
-function GlassCard({ data, index }: { data: CardData; index: number }) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  useScrollReveal(wrapRef as React.RefObject<HTMLElement>);
 
+function GlassCard({ data }: { data: CardData }) {
   const isLeft = data.side === 'left';
 
   // Card element
@@ -124,15 +107,15 @@ function GlassCard({ data, index }: { data: CardData; index: number }) {
 
   return (
     <div
-      ref={wrapRef}
-      className="flip-card-wrapper"
+      data-scroll-3d={isLeft ? 'card-depth-left' : 'card-depth-right'}
       style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         width: '100%',
-        animationDelay: `${index * 0.06}s`,
         position: 'relative',
         zIndex: 1,
+        transformOrigin: isLeft ? 'left center' : 'right center',
+        willChange: 'transform, opacity',
       }}
     >
       {isLeft ? cardEl : descEl}
@@ -151,6 +134,7 @@ export default function GlassCardsSection() {
         display: 'flex',
         flexDirection: 'column',
         gap: '4.5rem',
+        transformStyle: 'preserve-3d',
       }}
     >
       {/* Dashed vertical spine connecting all cards — timeline style */}
@@ -169,7 +153,7 @@ export default function GlassCardsSection() {
         }}
       />
 
-      <div className="fade-in-on-scroll" style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+      <div data-scroll-3d="fade-up" style={{ textAlign: 'center', position: 'relative', zIndex: 1, willChange: 'transform, opacity' }}>
         <h2
           className="gradient-text"
           style={{
@@ -183,8 +167,8 @@ export default function GlassCardsSection() {
         </h2>
       </div>
 
-      {CARDS.map((card, i) => (
-        <GlassCard key={card.slogan} data={card} index={i} />
+      {CARDS.map(card => (
+        <GlassCard key={card.slogan} data={card} />
       ))}
     </section>
   );

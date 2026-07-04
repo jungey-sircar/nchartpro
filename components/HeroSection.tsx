@@ -44,6 +44,7 @@ export default function HeroSection({ theme }: Props) {
   return (
     <section
       id="hero"
+      data-scroll-3d="hero-tilt"
       style={{
         position: 'relative',
         width: '100%',
@@ -52,6 +53,8 @@ export default function HeroSection({ theme }: Props) {
         overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
+        transformOrigin: 'center center',
+        willChange: 'transform, opacity',
       }}
     >
       {/* ── Hero trader image — large, blended into right side ── */}
