@@ -33,5 +33,6 @@ declare module 'page-flip' {
     flipPrev(corner?: FlipCorner): void;
     getCurrentPageIndex(): number;
     getPageCount(): number;
+    turnToPage(pageIndex: number): void;
   }
 }

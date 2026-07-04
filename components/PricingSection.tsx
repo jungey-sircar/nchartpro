@@ -90,6 +90,16 @@ const TIERS: Tier[] = [
   },
 ];
 
+const BOOK_PAGES = [
+  { tier: TIERS[TIERS.length - 1], isGhost: true },
+  ...TIERS.map((tier) => ({ tier, isGhost: false })),
+  { tier: TIERS[0], isGhost: true },
+];
+
+const FIRST_REAL_PAGE_INDEX = 1;
+const LAST_REAL_PAGE_INDEX = TIERS.length;
+const LAST_BOOK_PAGE_INDEX = BOOK_PAGES.length - 1;
+
 // Integration point — wire to eSewa payment flow when ready
 export function handleSubscribeClick(tierId: string) {
   console.log(`Subscribe clicked for tier: ${tierId}`);
@@ -102,6 +112,45 @@ export default function PricingSection() {
   const [currentPage, setCurrentPage] = useState(0);
   const [hoveredFeature, setHoveredFeature] = useState<Feature | null>(null);
   const [isFlipReady, setIsFlipReady] = useState(false);
+  const isResettingPageRef = useRef(false);
+
+  const normalizePageIndex = useCallback((pageIndex: number) => {
+    if (pageIndex <= 0) return TIERS.length - 1;
+    if (pageIndex >= LAST_BOOK_PAGE_INDEX) return 0;
+    return pageIndex - 1;
+  }, []);
+
+  const snapToRealPage = useCallback((pageIndex: number) => {
+    const pf = pageFlipRef.current;
+    if (!pf || isResettingPageRef.current) return;
+
+    isResettingPageRef.current = true;
+    setCurrentPage(normalizePageIndex(pageIndex));
+
+    if (typeof pf.turnToPage === 'function') {
+      pf.turnToPage(pageIndex);
+    }
+
+    requestAnimationFrame(() => {
+      isResettingPageRef.current = false;
+    });
+  }, [normalizePageIndex]);
+
+  const handleFlip = useCallback((pageIndex: number) => {
+    if (isResettingPageRef.current) return;
+
+    if (pageIndex === 0) {
+      snapToRealPage(LAST_REAL_PAGE_INDEX);
+      return;
+    }
+
+    if (pageIndex === LAST_BOOK_PAGE_INDEX) {
+      snapToRealPage(FIRST_REAL_PAGE_INDEX);
+      return;
+    }
+
+    setCurrentPage(pageIndex - 1);
+  }, [snapToRealPage]);
 
   // Initialize page-flip
   useEffect(() => {
@@ -109,8 +158,10 @@ export default function PricingSection() {
 
     let pf: any = null;
 
-    // Dynamic import for page-flip (it accesses window/document)
-    import('page-flip').then(({ PageFlip }) => {
+    // Load page-flip only on the client because it touches window/document.
+    const { PageFlip } = require('page-flip') as typeof import('page-flip');
+
+    Promise.resolve().then(() => {
       if (!bookRef.current) return;
 
       pf = new PageFlip(bookRef.current, {
@@ -135,11 +186,16 @@ export default function PricingSection() {
       pf.loadFromHTML(pages);
 
       pf.on('flip', (e: any) => {
-        setCurrentPage(e.data);
+        handleFlip(e.data);
       });
 
       pageFlipRef.current = pf;
       setIsFlipReady(true);
+      setCurrentPage(0);
+
+      if (typeof pf.turnToPage === 'function') {
+        pf.turnToPage(FIRST_REAL_PAGE_INDEX);
+      }
     });
 
     return () => {
@@ -153,7 +209,7 @@ export default function PricingSection() {
 
   const goToPage = useCallback((pageIndex: number) => {
     if (pageFlipRef.current && isFlipReady) {
-      pageFlipRef.current.flip(pageIndex, 'bottom');
+      pageFlipRef.current.flip(pageIndex + 1, 'top');
     }
   }, [isFlipReady]);
 
@@ -161,12 +217,10 @@ export default function PricingSection() {
     const pf = pageFlipRef.current;
     if (!pf || !isFlipReady) return;
     const current = pf.getCurrentPageIndex();
-    const total   = pf.getPageCount();
-    if (current >= total - 1) {
-      // Wrap to first page
-      pf.flip(0, 'bottom');
+    if (current >= LAST_REAL_PAGE_INDEX) {
+      pf.flip(LAST_BOOK_PAGE_INDEX, 'top');
     } else {
-      pf.flipNext('bottom');
+      pf.flipNext('top');
     }
   }, [isFlipReady]);
 
@@ -174,10 +228,9 @@ export default function PricingSection() {
     const pf = pageFlipRef.current;
     if (!pf || !isFlipReady) return;
     const current = pf.getCurrentPageIndex();
-    const total   = pf.getPageCount();
-    if (current <= 0) {
-      // Wrap to last page
-      pf.flip(total - 1, 'top');
+    if (current <= FIRST_REAL_PAGE_INDEX) {
+      // On the first real page, flip to the ghost Pro page and snap back after the animation.
+      pf.flip(0, 'top');
     } else {
       pf.flipPrev('top');
     }
@@ -284,19 +337,18 @@ export default function PricingSection() {
               ref={bookRef}
               className="pricing-book"
             >
-              {TIERS.map((t, i) => (
+              {/* Render all real tier pages */}
+              {BOOK_PAGES.map(({ tier: t, isGhost }, _i) => (
                 <div
-                  key={t.id}
+                  key={`${isGhost ? 'ghost' : 'tier'}-${t.id}-${_i}`}
                   className="pricing-page"
                   data-density="soft"
+                  aria-hidden={isGhost}
                 >
-                  {/* Inner glassy card content */}
                   <div className="pricing-page-inner">
-                    {/* Glassy overlay layers */}
                     <div className="glass-shimmer" />
                     <div className="glass-edge-glow" />
 
-                    {/* Badge area — fixed height for layout consistency */}
                     <div style={{ minHeight: 30, marginBottom: '0.5rem', position: 'relative', zIndex: 2 }}>
                       {t.highlighted && (
                         <div style={{
@@ -335,7 +387,6 @@ export default function PricingSection() {
                       </span>
                     </div>
 
-                    {/* Feature list */}
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.7rem', flex: 1, position: 'relative', zIndex: 2 }}>
                       {t.features.map(f => (
                         <li
@@ -388,6 +439,7 @@ export default function PricingSection() {
                   </div>
                 </div>
               ))}
+
             </div>
           </div>
 

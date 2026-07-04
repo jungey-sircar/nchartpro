@@ -136,7 +136,6 @@ export default function CandleCylinder() {
       rotationRef.current += AUTO_SPEED;
 
       if (cylinderEl) {
-        const mx = mouseRef.current.x;
         const my = mouseRef.current.y;
         cylinderEl.style.transform =
           `rotateX(${my.toFixed(1)}deg) rotateY(${rotationRef.current.toFixed(1)}deg)`;
