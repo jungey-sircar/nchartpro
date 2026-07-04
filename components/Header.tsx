@@ -59,7 +59,8 @@ export default function Header({ user, onLoginClick, onLogout }: Props) {
       {/* Brand */}
       <a href="#hero" style={{
         fontWeight: 800, fontSize: '0.9375rem', letterSpacing: '-0.03em',
-        color: 'var(--accent)', textDecoration: 'none', flexShrink: 0, lineHeight: 1,
+         color: '#B284BE',
+        textDecoration: 'none', flexShrink: 0, lineHeight: 1,
       }}>
         NChartPro
       </a>

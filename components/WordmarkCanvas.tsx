@@ -25,19 +25,19 @@ const PALETTE: Record<Theme, { bg: string; up: string; down: string; wick: strin
     bg:   'rgba(38, 34, 52, 0.96)',   // ~3× lighter than #0d0d0f
     up:   'rgba(52, 211, 153, 0.95)',
     down: 'rgba(248, 113, 113, 0.95)',
-    wick: 'rgba(99, 102, 241, 0.55)',
+     wick: 'rgba(178, 132, 190, 0.55)',
   },
   dark: {
     bg:   'rgba(34, 34, 42, 0.96)',   // ~3× lighter than #0d0d0f
     up:   'rgba(74, 222, 128, 0.93)',
     down: 'rgba(251, 113, 133, 0.93)',
-    wick: 'rgba(99, 102, 241, 0.50)',
+     wick: 'rgba(178, 132, 190, 0.50)',
   },
   light: {
     bg:   'rgba(180, 190, 208, 0.92)', // slightly darker than #E7EEF4
     up:   'rgba(16, 185, 129, 0.95)',
     down: 'rgba(239, 68, 68, 0.95)',
-    wick: 'rgba(37, 99, 235, 0.45)',
+     wick: 'rgba(178, 132, 190, 0.45)',
   },
 };
 
