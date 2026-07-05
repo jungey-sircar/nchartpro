@@ -1,14 +1,16 @@
+
 'use client';
 
 import { useRef, useEffect } from 'react';
 
 // ═══════════════════════════════════════════════════════════════════
 // CUSTOM TRADINGVIEW-STYLE CANVAS CHART
-// 10 market scenarios, smooth 60fps morphing between datasets,
-// animated candles, volume bars, grid, sweeping crosshair.
+// Single live market stream with sliding candles, volume bars, grid,
+// and a sweeping crosshair.
 // ═══════════════════════════════════════════════════════════════════
 const N = 48;
-const MORPH_MS = 950;
+const WINDOW = N + 1;
+const STEP_MS = 320;
 
 export interface Ohlcv { o: number; h: number; l: number; c: number; v: number }
 
@@ -21,95 +23,64 @@ function mulberry32(seed: number) {
   };
 }
 
-function gauss(t: number, c: number, s: number) {
-  return Math.exp(-((t - c) * (t - c)) / (2 * s * s));
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
-// Base close-price curves for each scenario
-const BASES: ((t: number) => number)[] = [
-  // 1 Strong Bullish Trend
-  (t) => 100 + 62 * t + 4 * Math.sin(t * 9),
-  // 2 Sideways Consolidation
-  (t) => 132 + 6 * Math.sin(t * 11) + 3 * Math.sin(t * 23),
-  // 3 Bullish Breakout
-  (t) => (t < 0.55 ? 112 + 4 * Math.sin(t * 18) : 112 + 72 * Math.pow((t - 0.55) / 0.45, 1.15)),
-  // 4 Pullback
-  (t) => (t < 0.6 ? 100 + 58 * (t / 0.6) : 158 - 26 * ((t - 0.6) / 0.4)),
-  // 5 Double Top
-  (t) => 106 + 50 * (gauss(t, 0.32, 0.1) + gauss(t, 0.68, 0.1)) - 16 * Math.max(0, (t - 0.82) / 0.18),
-  // 6 Bearish Downtrend
-  (t) => 168 - 60 * t + 4 * Math.sin(t * 10),
-  // 7 Support Bounce
-  (t) => (t < 0.55 ? 164 - 54 * (t / 0.55) : 110 + 48 * ((t - 0.55) / 0.45)),
-  // 8 Resistance Rejection
-  (t) => (t < 0.62 ? 104 + 54 * Math.pow(Math.min(1, t / 0.55), 0.85) : 158 - 42 * ((t - 0.62) / 0.38)),
-  // 9 High Volatility
-  (t) => 132 + 24 * Math.sin(t * 21) + 11 * Math.sin(t * 55) + 6 * Math.sin(t * 9),
-  // 10 Recovery Trend
-  (t) => (t < 0.4 ? 152 - 44 * (t / 0.4) : 108 + 64 * Math.pow((t - 0.4) / 0.6, 1.05)),
-];
-
-export const SCENARIO_META = [
-  { label: 'Strong Bullish Trend', tone: 'up' },
-  { label: 'Sideways Consolidation', tone: 'flat' },
-  { label: 'Bullish Breakout', tone: 'up' },
-  { label: 'Pullback', tone: 'down' },
-  { label: 'Double Top', tone: 'down' },
-  { label: 'Bearish Downtrend', tone: 'down' },
-  { label: 'Support Bounce', tone: 'up' },
-  { label: 'Resistance Rejection', tone: 'down' },
-  { label: 'High Volatility', tone: 'flat' },
-  { label: 'Recovery Trend', tone: 'up' },
-] as const;
-
-const DATASETS: Ohlcv[][] = BASES.map((base, si) => {
-  const rng = mulberry32(si * 1013 + 77);
-  const noiseAmp = si === 8 ? 6 : 2.2;
-  const data: Ohlcv[] = [];
-  let prevClose = base(0) + (rng() - 0.5) * noiseAmp;
-  for (let i = 0; i < N; i++) {
-    const t = i / (N - 1);
-    const c = base(t) + (rng() - 0.5) * 2 * noiseAmp;
-    const o = prevClose;
-    const spread = Math.abs(c - o);
-    const wick = noiseAmp * (0.8 + rng() * 1.6);
-    const h = Math.max(o, c) + rng() * wick;
-    const l = Math.min(o, c) - rng() * wick;
-    const v = 24 + rng() * 60 + spread * 7;
-    data.push({ o, h, l, c, v });
-    prevClose = c;
+function buildInitialWindow() {
+  const rng = mulberry32(1729);
+  const candles: Ohlcv[] = [];
+  let close = 118;
+  let momentum = 0.16;
+  for (let i = 0; i < WINDOW; i++) {
+    momentum = momentum * 0.96 + (rng() - 0.5) * 0.75;
+    const drift = Math.sin(i * 0.22) * 0.28 + momentum;
+    const open = close;
+    close = clamp(close + drift + (rng() - 0.5) * 1.6, 94, 198);
+    const spread = Math.abs(close - open);
+    const wick = 1.4 + rng() * 3.4 + spread * 0.4;
+    const high = Math.max(open, close) + rng() * wick;
+    const low = Math.min(open, close) - rng() * wick;
+    const volume = 24 + rng() * 58 + spread * 11;
+    candles.push({ o: open, h: high, l: low, c: close, v: volume });
   }
-  return data;
-});
+  return candles;
+}
+
+function advanceWindow(candles: Ohlcv[], rng: () => number, step: number, momentum: { value: number }) {
+  const prev = candles[candles.length - 1];
+  momentum.value = momentum.value * 0.92 + (rng() - 0.5) * 0.95;
+  const wave = Math.sin(step * 0.17) * 0.42 + Math.sin(step * 0.05) * 0.23;
+  const impulse = rng() > 0.96 ? (rng() - 0.5) * 3.2 : 0;
+  const open = prev.c;
+  const close = clamp(open + momentum.value + wave + impulse + (rng() - 0.5) * 1.25, 94, 198);
+  const spread = Math.abs(close - open);
+  const wick = 1.1 + rng() * 3.8 + spread * 0.48;
+  const high = Math.max(open, close) + rng() * wick;
+  const low = Math.min(open, close) - rng() * wick;
+  const volume = 22 + rng() * 66 + spread * 13 + Math.abs(momentum.value) * 20;
+
+  candles.push({ o: open, h: high, l: low, c: close, v: volume });
+  if (candles.length > WINDOW) candles.shift();
+}
 
 const UP = '#34d399';
 const DN = '#f87171';
 
-interface Props { scenario: number; active: boolean }
+interface Props { active: boolean }
 
-export default function CandleChart({ scenario, active }: Props) {
+export default function CandleChart({ active }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef({
-    displayed: DATASETS[0].map((d) => ({ ...d })),
-    prev: DATASETS[0].map((d) => ({ ...d })),
-    target: 0,
-    morphStart: 0,
-    morphing: false,
+    candles: buildInitialWindow(),
+    rng: mulberry32(481516),
+    momentum: { value: 0.18 },
+    slide: 0,
+    step: 0,
+    lastStepAt: performance.now(),
   });
-  const scenarioRef = useRef(scenario);
   const activeRef = useRef(active);
   activeRef.current = active;
-
-  // Trigger morph on scenario change
-  useEffect(() => {
-    if (scenario === scenarioRef.current) return;
-    const s = stateRef.current;
-    s.prev = s.displayed.map((d) => ({ ...d }));
-    s.target = scenario;
-    s.morphStart = performance.now();
-    s.morphing = true;
-    scenarioRef.current = scenario;
-  }, [scenario]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -134,24 +105,23 @@ export default function CandleChart({ scenario, active }: Props) {
 
     function draw(now: number) {
       animId = requestAnimationFrame(draw);
-      if (!activeRef.current || !canvas || !ctx) return;
 
       const s = stateRef.current;
-      // Morph interpolation
-      if (s.morphing) {
-        const raw = Math.min(1, (now - s.morphStart) / MORPH_MS);
-        const t = raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
-        const tgt = DATASETS[s.target];
-        for (let i = 0; i < N; i++) {
-          const a = s.prev[i], b = tgt[i], d = s.displayed[i];
-          d.o = a.o + (b.o - a.o) * t;
-          d.h = a.h + (b.h - a.h) * t;
-          d.l = a.l + (b.l - a.l) * t;
-          d.c = a.c + (b.c - a.c) * t;
-          d.v = a.v + (b.v - a.v) * t;
-        }
-        if (raw >= 1) s.morphing = false;
+      if (!activeRef.current || !canvas || !ctx) {
+        s.lastStepAt = now;
+        return;
       }
+
+      const elapsed = now - s.lastStepAt;
+      const steps = Math.floor(elapsed / STEP_MS);
+      if (steps > 0) {
+        for (let i = 0; i < steps; i++) {
+          advanceWindow(s.candles, s.rng, s.step, s.momentum);
+          s.step += 1;
+        }
+        s.lastStepAt += steps * STEP_MS;
+      }
+      s.slide = (now - s.lastStepAt) / STEP_MS;
 
       const W = canvas.width / dpr, H = canvas.height / dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -162,10 +132,14 @@ export default function CandleChart({ scenario, active }: Props) {
       const padB = volH + 14;
       const plotW = W - padL - padR;
       const plotH = H - padT - padB;
+      const rightInset = 100;
+      const candlePlotW = plotW - rightInset;
+      const spacing = candlePlotW / N;
+      const xShift = (s.slide - 1) * spacing;
 
       // Price range
       let min = Infinity, max = -Infinity, vMax = 0;
-      for (const d of s.displayed) {
+      for (const d of s.candles) {
         if (d.l < min) min = d.l;
         if (d.h > max) max = d.h;
         if (d.v > vMax) vMax = d.v;
@@ -173,8 +147,8 @@ export default function CandleChart({ scenario, active }: Props) {
       const pad = (max - min) * 0.09 + 0.001;
       min -= pad; max += pad;
       const yOf = (p: number) => padT + ((max - p) / (max - min)) * plotH;
-      const xOf = (i: number) => padL + ((i + 0.5) / N) * plotW;
-      const cw = (plotW / N) * 0.6;
+      const xOf = (i: number) => padL + ((i + 0.5) / N) * candlePlotW;
+      const cw = (candlePlotW / N) * 0.6;
 
       // Watermark
       ctx.font = '700 44px sans-serif';
@@ -193,7 +167,7 @@ export default function CandleChart({ scenario, active }: Props) {
         const y = padT + (g / 5) * plotH;
         ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR + 4, y); ctx.stroke();
         const price = max - (g / 5) * (max - min);
-        ctx.fillText(price.toFixed(1), W - padR + 10, y + 3);
+        ctx.fillText(price.toFixed(1), W - padR - rightInset + 10, y + 3);
       }
       for (let g = 0; g <= 6; g++) {
         const x = padL + (g / 6) * plotW;
@@ -201,25 +175,25 @@ export default function CandleChart({ scenario, active }: Props) {
       }
 
       // Volume bars
-      for (let i = 0; i < N; i++) {
-        const d = s.displayed[i];
+      for (let i = 0; i < s.candles.length; i++) {
+        const d = s.candles[i];
         const up = d.c >= d.o;
         const vh = (d.v / vMax) * volH;
         ctx.fillStyle = up ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)';
-        ctx.fillRect(xOf(i) - cw / 2, H - 10 - vh, cw, vh);
+        ctx.fillRect(xOf(i) - cw / 2 + xShift, H - 10 - vh, cw, vh);
       }
 
       // Candles
-      for (let i = 0; i < N; i++) {
-        const d = s.displayed[i];
+      for (let i = 0; i < s.candles.length; i++) {
+        const d = s.candles[i];
         const up = d.c >= d.o;
         const col = up ? UP : DN;
-        const x = xOf(i);
-        const glow = i >= N - 3;
+        const x = xOf(i) + xShift;
+        const glow = i >= s.candles.length - 3;
 
         ctx.save();
         if (glow) {
-          const pulse = i === N - 1 ? 10 + 5 * Math.sin(now * 0.005) : 7;
+          const pulse = i === s.candles.length - 1 ? 10 + 5 * Math.sin(now * 0.005) : 7;
           ctx.shadowColor = col;
           ctx.shadowBlur = pulse;
         }
@@ -239,9 +213,9 @@ export default function CandleChart({ scenario, active }: Props) {
 
       // Sweeping crosshair
       const sweep = (Math.sin(now * 0.00042) + 1) / 2;
-      const ci = Math.min(N - 1, Math.floor(sweep * N));
-      const cx = xOf(ci);
-      const cy = yOf(s.displayed[ci].c);
+        const ci = Math.min(s.candles.length - 1, Math.floor(sweep * s.candles.length));
+        const cx = xOf(ci) + xShift;
+        const cy = yOf(s.candles[ci].c);
       ctx.save();
       ctx.strokeStyle = 'rgba(255,255,255,0.22)';
       ctx.lineWidth = 1;
@@ -250,16 +224,16 @@ export default function CandleChart({ scenario, active }: Props) {
       ctx.beginPath(); ctx.moveTo(padL, cy); ctx.lineTo(W - padR + 4, cy); ctx.stroke();
       ctx.setLineDash([]);
       // Price tag
-      const tag = s.displayed[ci].c.toFixed(1);
+        const tag = s.candles[ci].c.toFixed(1);
       ctx.fillStyle = 'rgba(139,124,246,0.9)';
       const tagW = ctx.measureText(tag).width + 12;
       ctx.beginPath();
-      ctx.roundRect(W - padR + 4, cy - 8, tagW, 16, 3);
+      ctx.roundRect(W - padR - rightInset + 4, cy - 8, tagW, 16, 3);
       ctx.fill();
       ctx.fillStyle = '#fff';
       ctx.font = '10px monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(tag, W - padR + 10, cy + 3);
+      ctx.fillText(tag, W - padR - rightInset + 10, cy + 3);
       // Crosshair dot
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fill();

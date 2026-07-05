@@ -16,6 +16,7 @@ const EXIT_DISTANCE = 0.95;
 const FAR_Z = -960;
 const NEAR_Z = 240;
 const EXIT_Z = -420;
+const HERO_PIN_SCROLLS = 5;
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
@@ -88,17 +89,18 @@ export default function ScrollPerspective({ children }: { children: ReactNode })
       el.style.backfaceVisibility = 'hidden';
 
       if (preset === 'hero-tilt') {
-        const exitT = clamp(-top / (height * 0.7), 0, 1);
+        const heroScrollY = clamp(scrollY / (vh * HERO_PIN_SCROLLS), 0, 1);
+        const exitT = smoothstep(clamp((heroScrollY - 1) / 0.12, 0, 1));
         const t = smoothstep(exitT);
 
         el.style.transform = transform3d({
           z: lerp(0, NEAR_Z + 80, t),
-          y: lerp(0, -64, t),
-          scale: lerp(1, 1.22, t),
-          rotateX: lerp(0, -8, t),
+          y: lerp(0, -32, t),
+          scale: lerp(1, 1.04, t),
+          rotateX: lerp(0, -4, t),
         });
-        el.style.opacity = String(lerp(1, 0.18, t));
-        el.style.filter = `blur(${lerp(0, 4, t).toFixed(2)}px)`;
+        el.style.opacity = String(lerp(1, 0, t));
+        el.style.filter = `blur(${lerp(0, 3.5, t).toFixed(2)}px)`;
         continue;
       }
 

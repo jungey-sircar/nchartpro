@@ -2,11 +2,11 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import gsap from 'gsap';
-import CandleChart, { SCENARIO_META } from '@/components/charts/CandleChart';
+import CandleChart from '@/components/charts/CandleChart';
 
 // ═══════════════════════════════════════════════════════════════════
 // PINNED SCROLL-DRIVEN STORYTELLING PRESENTATION
-// One scroll = one slide. Left: morphing candlestick chart.
+// One scroll = one slide. Left: live candlestick chart.
 // Right: keynote-style slide. No buttons — scroll controls everything.
 // ═══════════════════════════════════════════════════════════════════
 const SLIDES = [
@@ -22,6 +22,8 @@ const SLIDES = [
   { title: 'Master the Market. Master Yourself.', sub: 'The greatest edge in trading is discipline.' },
 ];
 const LAST = SLIDES.length - 1;
+
+const CHART_LABEL = 'Live Market Flow';
 
 const TONE_COLORS: Record<string, string> = {
   up: '#34d399',
@@ -120,8 +122,7 @@ export default function StoryPresentation() {
     };
   }, [transitionTo]);
 
-  const meta = SCENARIO_META[idx];
-  const tone = TONE_COLORS[meta.tone];
+  const tone = TONE_COLORS.up;
 
   return (
     <section
@@ -141,7 +142,7 @@ export default function StoryPresentation() {
           boxSizing: 'border-box',
         }}
       >
-        {/* ── LEFT: morphing TradingView-style chart ── */}
+        {/* ── LEFT: live TradingView-style chart ── */}
         <div
           style={{
             flex: '1 1 58%',
@@ -179,11 +180,11 @@ export default function StoryPresentation() {
                 whiteSpace: 'nowrap',
               }}
             >
-              {meta.label.toUpperCase()}
+              {CHART_LABEL.toUpperCase()}
             </span>
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <CandleChart scenario={idx} active={active} />
+            <CandleChart active={active} />
           </div>
         </div>
 

@@ -6,7 +6,6 @@ import Header from '@/components/layout/Header';
 import HeroCinematic from '@/components/hero/HeroCinematic';
 import Footer from '@/components/layout/Footer';
 import AuthModal, { type AuthUser } from '@/components/modals/AuthModal';
-import MatrixCanvas from '@/components/effects/MatrixCanvas';
 import LightTrails from '@/components/effects/LightTrails';
 import ScrollPerspective from '@/components/effects/ScrollPerspective';
 import CanvasCursor from '@/components/effects/CanvasCursor';
@@ -21,6 +20,7 @@ export default function LandingPage() {
   const [user, setUser]         = useState<AuthUser | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [loaderDone, setLoaderDone] = useState(false);
+  const [heroIntroStarted, setHeroIntroStarted] = useState(false);
   const [showTrails, setShowTrails] = useState(false);
 
   // Check current session on mount
@@ -73,25 +73,13 @@ export default function LandingPage() {
       {/* Layer 2: sharp gradient overlay for readability/depth, no blur */}
       <div className="page-overlay" />
 
-      {/* Layer 3: Falling candlestick rain — fixed, full-page */}
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-        }}
-      >
-        <MatrixCanvas theme={theme} />
-      </div>
-
       {/* Fixed header — 48px height */}
       <Header user={user} onLoginClick={handleLoginClick} onLogout={handleLogout} />
 
       {/* Main content — padded top for header, padded bottom for sticky footer */}
       <main style={{ paddingTop: 48, paddingBottom: 38 }}>
         <ScrollPerspective>
-          <HeroCinematic theme={theme} start={loaderDone} />
+          <HeroCinematic theme={theme} start={heroIntroStarted} />
           <StoryPresentation />
           <Immersive3DScene />
           <PricingSection />
@@ -107,7 +95,10 @@ export default function LandingPage() {
 
       {/* Candlestick-matrix loading scene — plays once, reveals hero */}
       {!loaderDone && (
-        <CandleLoader onComplete={() => { setLoaderDone(true); setShowTrails(true); }} />
+        <CandleLoader
+          onFadeStart={() => setHeroIntroStarted(true)}
+          onComplete={() => { setLoaderDone(true); setShowTrails(true); }}
+        />
       )}
 
       {/* Cinematic light-trail intro — plays once, then unmounts */}

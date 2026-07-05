@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { type Theme } from '@/components/providers/ThemeProvider';
+import MatrixCanvas from '@/components/effects/MatrixCanvas';
 
 const HeroParticles = dynamic(() => import('./HeroParticles'), { ssr: false });
 
@@ -13,7 +14,7 @@ const TITLE_TOTAL = TITLE.length * LETTER_STAGGER + LETTER_DUR;
 
 interface Props { theme: Theme; start: boolean }
 
-export default function HeroCinematic({ start }: Props) {
+export default function HeroCinematic({ theme, start }: Props) {
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [muted, setMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -45,7 +46,6 @@ export default function HeroCinematic({ start }: Props) {
   return (
     <section
       id="hero"
-      data-scroll-3d="hero-tilt"
       className={start ? 'hero-play' : ''}
       style={{
         position: 'relative',
@@ -53,13 +53,14 @@ export default function HeroCinematic({ start }: Props) {
         height: '100vh',
         minHeight: 560,
         overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        transformOrigin: 'center center',
-        willChange: 'transform, opacity',
       }}
     >
-      {/* ── RIGHT: hero illustration — slides in from the right ── */}
+      {/* ── Background matrix candles, limited to hero only ── */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <MatrixCanvas theme={theme} />
+      </div>
+
+      {/* ── RIGHT: hero illustration — scrolls away normally ── */}
       <div
         className="hero-img-wrap"
         style={{
@@ -97,12 +98,13 @@ export default function HeroCinematic({ start }: Props) {
         {start && <HeroParticles />}
       </div>
 
-      {/* ── LEFT: letter-by-letter title, then subtitle → description → CTA ── */}
+      {/* Scrollable hero copy */}
       <div
         style={{
           position: 'relative', zIndex: 3,
           padding: '0 5vw', width: '62%',
           userSelect: 'none',
+          marginTop: 'clamp(10rem, 24vh, 16rem)',
         }}
       >
         <h1

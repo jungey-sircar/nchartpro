@@ -8,8 +8,7 @@ import { useRef, useEffect, useState } from 'react';
 // "glyph" is a realistic share-market candlestick from a random walk.
 // Stays ~2s, dissolves, then the site loads.
 // ═══════════════════════════════════════════════════════════════════
-const RAIN_MS = 2000;
-const DISSOLVE_MS = 650;
+const RAIN_MS = 1000;
 const FADE_MS = 450;
 
 const COL_SPACING = 26;   // dense matrix columns
@@ -25,14 +24,18 @@ interface Col {
   trailLen: number;
 }
 
-interface P { x: number; y: number; vx: number; vy: number; life: number; decay: number; size: number; up: boolean }
-
 function rand(a: number, b: number) { return a + Math.random() * (b - a); }
 
 const UP = { r: 68, g: 255, b: 140 };   // matrix-green bullish
 const DN = { r: 255, g: 92, b: 92 };    // bearish red
 
-export default function CandleLoader({ onComplete }: { onComplete: () => void }) {
+export default function CandleLoader({
+  onFadeStart,
+  onComplete,
+}: {
+  onFadeStart?: () => void;
+  onComplete: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fading, setFading] = useState(false);
   const doneRef = useRef(false);
@@ -143,30 +146,9 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
       drawCandle(col.x, col.y, col, true);
     }
 
-    const particles: P[] = [];
-    let dissolved = false;
     let lastStep = 0;
     const start = performance.now();
     let animId = 0;
-
-    function spawnDissolve() {
-      // Scatter particles from a grid sampling of the current frame glow
-      for (const col of cols) {
-        for (let cy = col.y - col.trailLen * CELL_H; cy <= col.y; cy += CELL_H) {
-          if (cy < -CELL_H || cy > h) continue;
-          if (particles.length >= 1500) return;
-          const up = Math.random() > 0.45;
-          for (let k = 0; k < 2; k++) {
-            particles.push({
-              x: col.x + rand(-5, 5), y: cy + rand(0, CELL_H),
-              vx: rand(-3.5, 3.5), vy: rand(-5, 1.5),
-              life: 1, decay: rand(0.02, 0.05),
-              size: rand(1, 2.8), up,
-            });
-          }
-        }
-      }
-    }
 
     function tick(now: number) {
       if (!canvas || !ctx) return;
@@ -194,27 +176,15 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
         }
       } else {
         animId = requestAnimationFrame(tick);
-        if (!dissolved) {
-          dissolved = true;
-          spawnDissolve();
-          setTimeout(() => setFading(true), Math.max(0, DISSOLVE_MS - FADE_MS));
+        if (!fading) {
+          setFading(true);
+          onFadeStart?.();
         }
-        // Fast fade of the rain frame + particle burst
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+
+        // Fade the rain downward into black instead of dissolving into particles.
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
         ctx.fillRect(0, 0, w, h);
-        for (let i = particles.length - 1; i >= 0; i--) {
-          const p = particles[i];
-          p.x += p.vx; p.y += p.vy;
-          p.vx *= 0.96; p.vy = p.vy * 0.96 + 0.1;
-          p.life -= p.decay;
-          if (p.life <= 0) { particles.splice(i, 1); continue; }
-          const colr = p.up ? UP : DN;
-          ctx.fillStyle = `rgba(${colr.r},${colr.g},${colr.b},${(p.life * 0.9).toFixed(3)})`;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        if (elapsed > RAIN_MS + DISSOLVE_MS + 100) { finish(); return; }
+        if (elapsed > RAIN_MS + FADE_MS) { finish(); return; }
       }
     }
 
@@ -229,7 +199,8 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
         position: 'fixed', inset: 0, zIndex: 9999,
         background: '#000',
         opacity: fading ? 0 : 1,
-        transition: `opacity ${FADE_MS}ms ease`,
+        transform: fading ? 'translateY(28px)' : 'translateY(0)',
+        transition: `opacity ${FADE_MS}ms ease, transform ${FADE_MS}ms ease`,
         pointerEvents: 'none',
       }}
     >
