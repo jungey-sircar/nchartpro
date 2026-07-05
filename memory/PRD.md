@@ -15,7 +15,7 @@ from bottom-left corner vanishing at top-center (replaces cursive N).
 - Supervisor `frontend` points to /app/frontend → shim package.json runs `npx next dev -H 0.0.0.0 -p 3000` in /app. DO NOT delete /app/frontend/package.json.
 
 ## What's been implemented (2026-06)
-- CandleLoader.tsx: fullscreen black loader, glowing candle rain ~2.5s → dissolves into particles → fade, centered NChartPro wordmark, body scroll locked, reduced-motion skip
+- CandleLoader.tsx: Matrix digital-rain loader (like matrix.logic-wire.de) with realistic candlesticks — dense 26px columns, CELL step 34px, translucent-black trail fade (0.10/step), prefilled trails at init for instant full screen, bright white-hot head candle, per-column random-walk OHLC (open=prev close); rain 2.0s → particle dissolve 0.65s → fade; no center text; body scroll locked; reduced-motion skip
 - LightTrails.tsx: fiery stock-market zigzag trail, bottom-left corner → vanishes top-center with spark burst (draw 2.7s / hold / fade), gold+fire palette, embers/stars
 - HeroCinematic.tsx: letter-by-letter gradient title (CSS staggered, blur/glow/slide), sequential subtitle→description→CTAs (#pricing, #story), hero image slides from right blur→sharp + floating loop, audio button + scroll indicator kept
 - HeroParticles.tsx: plain three.js — 220 gold drift points + 8 floating translucent candlesticks + mouse parallax camera

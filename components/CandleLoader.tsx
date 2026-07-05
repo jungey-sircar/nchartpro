@@ -3,25 +3,34 @@
 import { useRef, useEffect, useState } from 'react';
 
 // ═══════════════════════════════════════════════════════════════════
-// CANDLESTICK MATRIX LOADER — full-screen black scene, glowing candle
-// rain, dissolves into particles, then reveals the hero.
+// MATRIX CANDLESTICK LOADER — classic Matrix digital-rain effect
+// (dense columns, bright glowing heads, fading trails) but every
+// "glyph" is a realistic share-market candlestick from a random walk.
+// Stays ~2s, dissolves, then the site loads.
 // ═══════════════════════════════════════════════════════════════════
-const RAIN_MS = 2500;
-const DISSOLVE_MS = 1000;
-const FADE_MS = 600;
+const RAIN_MS = 2000;
+const DISSOLVE_MS = 650;
+const FADE_MS = 450;
 
-interface Candle { bodyH: number; wickTop: number; wickBot: number; up: boolean }
-interface Stream { x: number; y: number; speed: number; candles: Candle[]; bright: number }
+const COL_SPACING = 26;   // dense matrix columns
+const CELL_H = 34;        // vertical cell per candle (matrix grid step)
+const STEP_MS = 36;       // matrix tick speed
+
+interface Col {
+  x: number;
+  y: number;            // head cell y (px)
+  stepEvery: number;    // ticks per step (1 = fast, 3 = slow)
+  tickCount: number;
+  lastClose: number;    // random-walk price state
+  trailLen: number;
+}
+
 interface P { x: number; y: number; vx: number; vy: number; life: number; decay: number; size: number; up: boolean }
 
 function rand(a: number, b: number) { return a + Math.random() * (b - a); }
-function mkCandle(): Candle {
-  return { bodyH: rand(7, 26), wickTop: rand(2, 13), wickBot: rand(2, 13), up: Math.random() > 0.5 };
-}
-function candleH(c: Candle) { return c.wickTop + c.bodyH + c.wickBot; }
 
-const UP = { r: 52, g: 211, b: 153 };
-const DN = { r: 248, g: 113, b: 113 };
+const UP = { r: 68, g: 255, b: 140 };   // matrix-green bullish
+const DN = { r: 255, g: 92, b: 92 };    // bearish red
 
 export default function CandleLoader({ onComplete }: { onComplete: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -57,63 +66,108 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
     canvas.style.height = h + 'px';
     ctx.scale(dpr, dpr);
 
-    const spacing = 46;
-    const cols = Math.ceil(w / spacing) + 1;
-    const streams: Stream[] = [];
-    for (let i = 0; i < cols; i++) {
-      const candles: Candle[] = [];
-      for (let j = 0; j < 10; j++) candles.push(mkCandle());
-      streams.push({
-        x: i * spacing + rand(-8, 8),
-        y: rand(-h * 1.6, h * 0.4),
-        speed: rand(4, 12),
-        candles,
-        bright: rand(0.35, 0.85),
+    // Solid black base — trails are created by translucent black fade
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+
+    const cols: Col[] = [];
+    const nCols = Math.ceil(w / COL_SPACING) + 1;
+    for (let i = 0; i < nCols; i++) {
+      cols.push({
+        x: i * COL_SPACING + COL_SPACING / 2,
+        y: rand(-h, h * 0.6),
+        stepEvery: Math.random() < 0.5 ? 1 : Math.random() < 0.75 ? 2 : 3,
+        tickCount: 0,
+        lastClose: rand(80, 160),
+        trailLen: rand(8, 20),
       });
+    }
+
+    // Realistic candle from a random walk (open = previous close)
+    function nextCandle(col: Col) {
+      const o = col.lastClose;
+      const drift = rand(-7, 7);
+      const c = Math.max(40, Math.min(200, o + drift));
+      col.lastClose = c;
+      const bodyTopP = Math.max(o, c);
+      const bodyH = Math.max(3, Math.min(20, Math.abs(c - o) * 1.6 + 3));
+      const wickTop = rand(1.5, 9);
+      const wickBot = rand(1.5, 9);
+      return { up: c >= o, bodyH, wickTop, wickBot, p: bodyTopP };
+    }
+
+    function drawCandle(x: number, cellY: number, col: Col, head: boolean, dim = 1) {
+      if (!ctx) return;
+      const cndl = nextCandle(col);
+      const colr = cndl.up ? UP : DN;
+      const totalH = cndl.wickTop + cndl.bodyH + cndl.wickBot;
+      const topY = cellY + (CELL_H - totalH) / 2;
+      const bodyTop = topY + cndl.wickTop;
+
+      ctx.save();
+      if (head) {
+        // Bright white-hot head like the matrix leading glyph
+        ctx.shadowColor = `rgba(${colr.r},${colr.g},${colr.b},0.95)`;
+        ctx.shadowBlur = 16;
+        ctx.strokeStyle = 'rgba(240,255,245,0.95)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x, topY);
+        ctx.lineTo(x, topY + totalH);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(${Math.min(255, colr.r + 140)},${Math.min(255, colr.g + 60)},${Math.min(255, colr.b + 120)},0.98)`;
+        ctx.fillRect(x - 4.5, bodyTop, 9, cndl.bodyH);
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillRect(x - 2, bodyTop + cndl.bodyH * 0.2, 4, cndl.bodyH * 0.6);
+      } else {
+        ctx.shadowColor = `rgba(${colr.r},${colr.g},${colr.b},${(0.5 * dim).toFixed(2)})`;
+        ctx.shadowBlur = 7;
+        ctx.strokeStyle = `rgba(${colr.r},${colr.g},${colr.b},${(0.55 * dim).toFixed(2)})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, topY);
+        ctx.lineTo(x, topY + totalH);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(${colr.r},${colr.g},${colr.b},${(0.85 * dim).toFixed(2)})`;
+        ctx.fillRect(x - 4.5, bodyTop, 9, cndl.bodyH);
+      }
+      ctx.restore();
+    }
+
+    // Prefill: draw each column's trail so the screen is instantly full,
+    // exactly like the matrix reference (no slow fill-in).
+    for (const col of cols) {
+      col.y = rand(0, h);
+      const trail = Math.floor(col.trailLen);
+      for (let k = trail; k >= 1; k--) {
+        const cy = col.y - k * CELL_H;
+        if (cy < -CELL_H || cy > h) continue;
+        drawCandle(col.x, cy, col, false, Math.max(0.08, 1 - k / trail) * 0.8);
+      }
     }
 
     const particles: P[] = [];
     let dissolved = false;
+    let lastStep = 0;
     const start = performance.now();
     let animId = 0;
 
-    function drawCandle(x: number, topY: number, c: Candle, alpha: number, glow: boolean) {
-      if (!ctx) return;
-      const bodyTop = topY + c.wickTop;
-      const col = c.up ? UP : DN;
-      ctx.save();
-      if (glow) {
-        ctx.shadowColor = `rgba(${col.r},${col.g},${col.b},${Math.min(1, alpha * 1.6)})`;
-        ctx.shadowBlur = 14;
-      }
-      ctx.strokeStyle = `rgba(${col.r},${col.g},${col.b},${alpha * 0.7})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, topY);
-      ctx.lineTo(x, topY + candleH(c));
-      ctx.stroke();
-      ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${alpha})`;
-      ctx.fillRect(x - 5, bodyTop, 10, c.bodyH);
-      ctx.restore();
-    }
-
-    function dissolveStreams() {
-      for (const s of streams) {
-        let curY = s.y;
-        for (const c of s.candles) {
-          const cy = curY + c.wickTop + c.bodyH / 2;
-          if (cy > -30 && cy < h + 30 && particles.length < 1400) {
-            const n = 4;
-            for (let k = 0; k < n; k++) {
-              particles.push({
-                x: s.x + rand(-6, 6), y: cy + rand(-c.bodyH / 2, c.bodyH / 2),
-                vx: rand(-3.2, 3.2), vy: rand(-4.5, 1.5),
-                life: 1, decay: rand(0.018, 0.04),
-                size: rand(1, 3), up: c.up,
-              });
-            }
+    function spawnDissolve() {
+      // Scatter particles from a grid sampling of the current frame glow
+      for (const col of cols) {
+        for (let cy = col.y - col.trailLen * CELL_H; cy <= col.y; cy += CELL_H) {
+          if (cy < -CELL_H || cy > h) continue;
+          if (particles.length >= 1500) return;
+          const up = Math.random() > 0.45;
+          for (let k = 0; k < 2; k++) {
+            particles.push({
+              x: col.x + rand(-5, 5), y: cy + rand(0, CELL_H),
+              vx: rand(-3.5, 3.5), vy: rand(-5, 1.5),
+              life: 1, decay: rand(0.02, 0.05),
+              size: rand(1, 2.8), up,
+            });
           }
-          curY += candleH(c) + 12;
         }
       }
     }
@@ -121,44 +175,51 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
     function tick(now: number) {
       if (!canvas || !ctx) return;
       const elapsed = now - start;
-      ctx.clearRect(0, 0, w, h);
 
       if (elapsed < RAIN_MS) {
-        for (const s of streams) {
-          let curY = s.y;
-          for (let ci = 0; ci < s.candles.length; ci++) {
-            const c = s.candles[ci];
-            const fullH = candleH(c);
-            if (curY + fullH > -20 && curY < h + 20) {
-              const fade = 1 - (ci / s.candles.length) * 0.65;
-              drawCandle(s.x, curY, c, s.bright * fade, ci === 0);
-            }
-            curY += fullH + 12;
-          }
-          s.y += s.speed;
-          const total = s.candles.reduce((a, c) => a + candleH(c) + 12, 0);
-          if (s.y - total > h + 60) {
-            s.y = -total - rand(0, 200);
-            s.speed = rand(4, 12);
+        animId = requestAnimationFrame(tick);
+        if (now - lastStep < STEP_MS) return;
+        lastStep = now;
+
+        // Matrix trail fade — translucent black wash instead of clear
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+        ctx.fillRect(0, 0, w, h);
+
+        for (const col of cols) {
+          col.tickCount++;
+          if (col.tickCount % col.stepEvery !== 0) continue;
+          drawCandle(col.x, col.y, col, true);
+          col.y += CELL_H;
+          if (col.y - col.trailLen * CELL_H > h) {
+            col.y = rand(-h * 0.4, 0);
+            col.trailLen = rand(8, 20);
+            col.stepEvery = Math.random() < 0.5 ? 1 : Math.random() < 0.75 ? 2 : 3;
           }
         }
       } else {
-        if (!dissolved) { dissolved = true; dissolveStreams(); setTimeout(() => setFading(true), DISSOLVE_MS - FADE_MS); }
+        animId = requestAnimationFrame(tick);
+        if (!dissolved) {
+          dissolved = true;
+          spawnDissolve();
+          setTimeout(() => setFading(true), Math.max(0, DISSOLVE_MS - FADE_MS));
+        }
+        // Fast fade of the rain frame + particle burst
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.fillRect(0, 0, w, h);
         for (let i = particles.length - 1; i >= 0; i--) {
           const p = particles[i];
           p.x += p.vx; p.y += p.vy;
-          p.vx *= 0.97; p.vy = p.vy * 0.97 + 0.06;
+          p.vx *= 0.96; p.vy = p.vy * 0.96 + 0.1;
           p.life -= p.decay;
           if (p.life <= 0) { particles.splice(i, 1); continue; }
-          const col = p.up ? UP : DN;
-          ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${(p.life * 0.85).toFixed(3)})`;
+          const colr = p.up ? UP : DN;
+          ctx.fillStyle = `rgba(${colr.r},${colr.g},${colr.b},${(p.life * 0.9).toFixed(3)})`;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
           ctx.fill();
         }
-        if (elapsed > RAIN_MS + DISSOLVE_MS + 150) { finish(); return; }
+        if (elapsed > RAIN_MS + DISSOLVE_MS + 100) { finish(); return; }
       }
-      animId = requestAnimationFrame(tick);
     }
 
     animId = requestAnimationFrame(tick);
@@ -177,27 +238,6 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
       }}
     >
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
-      <div style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 10, pointerEvents: 'none',
-      }}>
-        <div style={{
-          fontSize: 'clamp(1.6rem, 3.2vw, 2.6rem)', fontWeight: 800, letterSpacing: '-0.03em',
-          color: '#B284BE',
-          textShadow: '0 0 30px rgba(178,132,190,0.5), 0 0 60px rgba(178,132,190,0.2)',
-          animation: 'loaderPulse 1.6s ease-in-out infinite',
-        }}>
-          NChartPro
-        </div>
-        <div style={{
-          fontSize: 11, letterSpacing: '0.35em', textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace',
-        }}>
-          Loading Markets
-        </div>
-      </div>
-      <style>{`@keyframes loaderPulse{0%,100%{opacity:.75}50%{opacity:1}}`}</style>
     </div>
   );
 }
