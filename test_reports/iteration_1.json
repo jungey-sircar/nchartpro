@@ -1,0 +1,38 @@
+{
+  "summary": "Frontend E2E testing of NChartPro cinematic landing page. Loader → hero → light-trails → pinned story presentation → features/pricing flow verified end-to-end. 23/25 core assertions passed. Header transparency/glass behaviour, hero letter/subtitle/CTAs, pinned story chart + slide morphing across scenarios (STRONG BULLISH TREND → DOUBLE TOP → RECOVERY TREND), and slide-title transitions (Built by Traders → Every Chart Has a Story → Master the Market. Master Yourself.) all verified via scroll math. Only issues are two missing static assets (audio, favicon) and one backend endpoint returning 500 instead of 401.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      { "endpoint": "/api/v1/user/me", "issue": "Returns 500 for logged-out visitor (problem statement expects 401). Response body is swallowed by front-end (res.ok check) so UX is unaffected, but it pollutes the console with an error every 30s (periodic session-check interval)." }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      { "component": "HeroCinematic <audio>", "issue": "src='/audio/background.mp3' returns 404 — /app/public has no audio directory; audio element logs a resource error on page load", "selector": "audio[src='/audio/background.mp3']", "priority": "LOW" },
+      { "component": "app/layout.tsx", "issue": "/favicon.ico returns 404 (no favicon shipped)", "selector": "link[rel=icon]", "priority": "LOW" }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Either add /public/audio/background.mp3 or gate the <audio> element behind a src-exists check so the browser does not throw a 404. Spec says audio is not under test, so a silent-fail is acceptable.",
+    "Fix /api/v1/user/me to return 401 (not 500) when the visitor is unauthenticated, or short-circuit the fetch client-side when no session cookie is present. Currently a 500 fires on every load and every 30s.",
+    "Add a favicon (public/favicon.ico) to remove the last console 404."
+  ],
+  "critical_code_review_comments": [
+    "components/StoryPresentation.tsx line 131: section height is (SLIDES.length + 1) * 100vh = 11 * 100vh, so the pinned block outlasts the last slide by ~100vh of empty scroll before releasing. If you want the last slide flush with the next section, use SLIDES.length * 100vh (10*100vh).",
+    "components/LandingPage.tsx: periodic /api/v1/user/me poll runs even when the backend returns 500, spamming the console. Handle non-401 non-ok status separately.",
+    "components/HeroCinematic.tsx: <audio> element is always rendered even without a real audio asset — either lazy-load, feature-detect, or ship the file.",
+    "components/CandleLoader.tsx sets document.body.style.overflow = 'hidden' but restores to '' on unmount — if the component re-mounts (e.g. under React Strict Mode double-invoke) it could momentarily unlock scroll while the animation is running. Consider using a class instead of inline style.",
+    "components/StoryPresentation.tsx snap uses idleTimer of 160ms; if a user scrolls slowly with a trackpad this fires between slides — mostly OK but occasionally jumps a slide. Non-blocking."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only run)", "frontend": "92% (23/25 core assertions)" },
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "App is a Next.js 16 dev server at localhost:3000. Loader plays ~3.7s, light-trails then plays ~4s. Story section starts at scrollY = viewportHeight (100vh hero above it) and is 11 * 100vh tall (indices 0-9 + trailing 100vh). Use window.scrollTo(0, top + i*vh) then wait ~1.2s (Lenis snap animates ~750ms). CTAs are anchor <a href='#pricing|#story'>, so a click triggers native anchor scroll (Lenis intercepts). Slide title uses data-testid='story-slide-title'; scenario chip = 'story-scenario-label'; canvas chart = 'story-chart-canvas'. Ignore /api/v1/user/me 500 in console when triaging future runs.",
+  "rca of the issue": "Two 404s trace to missing static assets (public/audio/background.mp3, public/favicon.ico). The 500 from /api/v1/user/me is a backend concern — the E1 spec explicitly said this endpoint may 401 for logged-out users, but the current backend surface actually returns 500. LandingPage handles this gracefully (res.ok check) so functionality is fine, but the console noise is a code-review concern.",
+  "test_credentials": "not required — landing page tested unauthenticated"
+}

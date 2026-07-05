@@ -27,8 +27,16 @@ const NAV_LINKS = [
 export default function Header({ user, onLoginClick, onLogout }: Props) {
   const { theme, setTheme } = useTheme();
   const [dropOpen, setDropOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const dropRef  = useRef<HTMLDivElement>(null);
   const iconRef  = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -49,11 +57,12 @@ export default function Header({ user, onLoginClick, onLogout }: Props) {
       height: 48, zIndex: 100,
       display: 'flex', alignItems: 'center',
       padding: '0 1.25rem', gap: '0.875rem',
-      background: 'var(--glass-bg)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      borderBottom: '1px solid var(--border)',
-      boxShadow: '0 1px 0 rgba(0,0,0,0.25)',
+      background: scrolled ? 'var(--glass-bg)' : 'transparent',
+      backdropFilter: scrolled ? 'blur(16px)' : 'none',
+      WebkitBackdropFilter: scrolled ? 'blur(16px)' : 'none',
+      borderBottom: scrolled ? '1px solid var(--border)' : '1px solid transparent',
+      boxShadow: scrolled ? '0 1px 0 rgba(0,0,0,0.25)' : 'none',
+      transition: 'background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease',
     }}>
 
       {/* Brand */}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from './ThemeProvider';
 import Header from './Header';
-import HeroSection from './HeroSection';
+import HeroCinematic from './HeroCinematic';
 import Footer from './Footer';
 import AuthModal, { type AuthUser } from './AuthModal';
 import MatrixCanvas from './MatrixCanvas';
@@ -12,13 +12,17 @@ import ScrollPerspective from './ScrollPerspective';
 import CanvasCursor from './CanvasCursor';
 import Immersive3DScene from './Immersive3DScene';
 import PricingSection from './PricingSection';
+import CandleLoader from './CandleLoader';
+import StoryPresentation from './StoryPresentation';
+import SmoothScroll from './SmoothScroll';
 
 export default function LandingPage() {
   const { theme } = useTheme();
   const [user, setUser]         = useState<AuthUser | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const [showTrails, setShowTrails] = useState(true);
+  const [loaderDone, setLoaderDone] = useState(false);
+  const [showTrails, setShowTrails] = useState(false);
 
   // Check current session on mount
   useEffect(() => {
@@ -102,7 +106,8 @@ export default function LandingPage() {
       {/* Main content — padded top for header, padded bottom for sticky footer */}
       <main style={{ paddingTop: 48, paddingBottom: 38 }}>
         <ScrollPerspective>
-          <HeroSection theme={theme} />
+          <HeroCinematic theme={theme} start={loaderDone} />
+          <StoryPresentation />
           <Immersive3DScene />
           <PricingSection />
         </ScrollPerspective>
@@ -115,8 +120,16 @@ export default function LandingPage() {
         <AuthModal onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} />
       )}
 
+      {/* Candlestick-matrix loading scene — plays once, reveals hero */}
+      {!loaderDone && (
+        <CandleLoader onComplete={() => { setLoaderDone(true); setShowTrails(true); }} />
+      )}
+
       {/* Cinematic light-trail intro — plays once, then unmounts */}
       {showTrails && <LightTrails onComplete={() => setShowTrails(false)} />}
+
+      {/* Lenis smooth scrolling */}
+      <SmoothScroll />
 
       {/* Canvas cursor trail effect */}
       <CanvasCursor />
