@@ -493,32 +493,32 @@ export default function Immersive3DScene() {
                   /* Blue glassmorphism — matching pricing cards */
                   background: `linear-gradient(
                     160deg,
-                    rgba(99, 102, 241, 0.15) 0%,
-                    rgba(30, 30, 50, 0.55) 25%,
-                    rgba(15, 15, 25, 0.50) 50%,
-                    rgba(30, 30, 55, 0.55) 75%,
-                    rgba(99, 102, 241, 0.10) 100%
+                    rgba(112, 255, 185, 0.18) 0%,
+                    rgba(24, 48, 39, 0.52) 24%,
+                    rgba(12, 22, 18, 0.45) 50%,
+                    rgba(21, 57, 43, 0.50) 76%,
+                    rgba(112, 255, 185, 0.12) 100%
                   )`,
-                  backdropFilter: 'blur(28px) saturate(1.6) brightness(1.1)',
-                  WebkitBackdropFilter: 'blur(28px) saturate(1.6) brightness(1.1)',
-                  border: '1.5px solid rgba(99, 102, 241, 0.35)',
+                  backdropFilter: 'blur(34px) saturate(1.8) brightness(1.14)',
+                  WebkitBackdropFilter: 'blur(34px) saturate(1.8) brightness(1.14)',
+                  border: '1.5px solid rgba(112, 255, 185, 0.28)',
                   boxShadow: `
-                    0 0 40px rgba(99, 102, 241, 0.12),
+                    0 0 46px rgba(112, 255, 185, 0.12),
                     0 8px 32px rgba(0, 0, 0, 0.4),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-                    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-                    inset 0 -1px 0 rgba(99, 102, 241, 0.08)
+                    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+                    inset 0 -1px 0 rgba(112, 255, 185, 0.10)
                   `,
                 } as React.CSSProperties}
                   onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99, 102, 241, 0.50)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(112, 255, 185, 0.45)';
                   (e.currentTarget as HTMLElement).style.boxShadow =
-                    '0 0 60px rgba(99,102,241,0.20), 0 12px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.08)';
+                    '0 0 72px rgba(112,255,185,0.22), 0 12px 48px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.24), inset 0 0 0 1px rgba(255,255,255,0.10)';
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99, 102, 241, 0.35)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(112, 255, 185, 0.28)';
                   (e.currentTarget as HTMLElement).style.boxShadow =
-                    '0 0 40px rgba(99,102,241,0.12), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 0 1px rgba(255,255,255,0.06)';
+                    '0 0 46px rgba(112,255,185,0.12), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.08)';
                 }}
               >
                 <button
@@ -550,7 +550,7 @@ export default function Immersive3DScene() {
                   <div style={{
                     position: 'absolute', top: '-60%', left: '-60%',
                     width: '60%', height: '220%',
-                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0.08) 48%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.08) 52%, rgba(255,255,255,0.03) 70%, transparent 100%)',
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(161,255,214,0.04) 28%, rgba(213,255,239,0.10) 48%, rgba(255,255,255,0.16) 50%, rgba(213,255,239,0.10) 52%, rgba(161,255,214,0.04) 72%, transparent 100%)',
                     transform: 'translateX(-100%) rotate(25deg)',
                     animation: 'glass-shimmer-move 5s ease-in-out infinite',
                   }} />
@@ -561,9 +561,9 @@ export default function Immersive3DScene() {
                   position: 'absolute', inset: 0, zIndex: 1,
                   borderRadius: 'inherit', pointerEvents: 'none',
                   background: `
-                    radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.25) 0%, transparent 55%),
-                    radial-gradient(ellipse at 80% 100%, rgba(99, 102, 241, 0.18) 0%, transparent 55%),
-                    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 30%)
+                    radial-gradient(ellipse at 20% 0%, rgba(112, 255, 185, 0.28) 0%, transparent 55%),
+                    radial-gradient(ellipse at 80% 100%, rgba(112, 255, 185, 0.20) 0%, transparent 55%),
+                    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, transparent 28%)
                   `,
                 }} />
 
@@ -593,7 +593,7 @@ export default function Immersive3DScene() {
                     </span>
                     <span style={{
                       fontSize: '9px', fontWeight: 600, letterSpacing: '0.12em',
-                      color: 'var(--accent)', opacity: 0.8,
+                        color: 'rgba(166, 255, 216, 0.95)', opacity: 0.9,
                     }}>
                       {feat.year}
                     </span>
@@ -617,8 +617,8 @@ export default function Immersive3DScene() {
                 {/* Bottom accent line */}
                 <div style={{
                   position: 'absolute', bottom: 0, left: '8%', right: '8%', height: 2,
-                  background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
-                  opacity: 0.25, zIndex: 2,
+                  background: 'linear-gradient(90deg, transparent, rgba(112, 255, 185, 0.95), transparent)',
+                  opacity: 0.38, zIndex: 2,
                 }} />
               </div>
             );

@@ -47,11 +47,6 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
       if (!doneRef.current) { doneRef.current = true; onComplete(); }
     };
 
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const t = setTimeout(finish, 400);
-      return () => clearTimeout(t);
-    }
-
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -143,8 +138,9 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
       for (let k = trail; k >= 1; k--) {
         const cy = col.y - k * CELL_H;
         if (cy < -CELL_H || cy > h) continue;
-        drawCandle(col.x, cy, col, false, Math.max(0.08, 1 - k / trail) * 0.8);
+        drawCandle(col.x, cy, col, false, Math.max(0.14, 1 - k / trail) * 0.95);
       }
+      drawCandle(col.x, col.y, col, true);
     }
 
     const particles: P[] = [];
@@ -182,7 +178,7 @@ export default function CandleLoader({ onComplete }: { onComplete: () => void })
         lastStep = now;
 
         // Matrix trail fade — translucent black wash instead of clear
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
         ctx.fillRect(0, 0, w, h);
 
         for (const col of cols) {
