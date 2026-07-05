@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useTheme, type Theme } from './ThemeProvider';
+import { useTheme, type Theme } from '@/components/providers/ThemeProvider';
 
 interface User { id: string; email: string; username: string; }
 

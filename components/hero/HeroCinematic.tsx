@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { type Theme } from './ThemeProvider';
+import { type Theme } from '@/components/providers/ThemeProvider';
 
 const HeroParticles = dynamic(() => import('./HeroParticles'), { ssr: false });
 

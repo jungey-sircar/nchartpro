@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import { type Theme } from './ThemeProvider';
+import { type Theme } from '@/components/providers/ThemeProvider';
 
 interface Candle {
   x: number;

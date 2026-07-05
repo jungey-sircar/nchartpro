@@ -16,7 +16,7 @@
  */
 
 import { useRef, useEffect, useCallback } from 'react';
-import { type Theme } from './ThemeProvider';
+import { type Theme } from '@/components/providers/ThemeProvider';
 
 // bg is intentionally offset from the page background so the letterforms
 // are visible — slightly lighter for dark themes, slightly darker for light.

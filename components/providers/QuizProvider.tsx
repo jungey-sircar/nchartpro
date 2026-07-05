@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import QuizDialog from './QuizDialog';
+import QuizDialog from '@/components/modals/QuizDialog';
 
 interface QuizContextValue {
   open:   boolean;

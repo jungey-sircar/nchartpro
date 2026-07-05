@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTheme } from './ThemeProvider';
-import Header from './Header';
-import HeroCinematic from './HeroCinematic';
-import Footer from './Footer';
-import AuthModal, { type AuthUser } from './AuthModal';
-import MatrixCanvas from './MatrixCanvas';
-import LightTrails from './LightTrails';
-import ScrollPerspective from './ScrollPerspective';
-import CanvasCursor from './CanvasCursor';
-import Immersive3DScene from './Immersive3DScene';
-import PricingSection from './PricingSection';
-import CandleLoader from './CandleLoader';
-import StoryPresentation from './StoryPresentation';
-import SmoothScroll from './SmoothScroll';
+import { useTheme } from '@/components/providers/ThemeProvider';
+import Header from '@/components/layout/Header';
+import HeroCinematic from '@/components/hero/HeroCinematic';
+import Footer from '@/components/layout/Footer';
+import AuthModal, { type AuthUser } from '@/components/modals/AuthModal';
+import MatrixCanvas from '@/components/effects/MatrixCanvas';
+import LightTrails from '@/components/effects/LightTrails';
+import ScrollPerspective from '@/components/effects/ScrollPerspective';
+import CanvasCursor from '@/components/effects/CanvasCursor';
+import Immersive3DScene from '@/components/sections/Immersive3DScene';
+import PricingSection from '@/components/sections/PricingSection';
+import CandleLoader from '@/components/effects/CandleLoader';
+import StoryPresentation from '@/components/sections/StoryPresentation';
+import SmoothScroll from '@/components/effects/SmoothScroll';
 
 export default function LandingPage() {
   const { theme } = useTheme();

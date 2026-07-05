@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import gsap from 'gsap';
-import CandleChart, { SCENARIO_META } from './CandleChart';
+import CandleChart, { SCENARIO_META } from '@/components/charts/CandleChart';
 
 // ═══════════════════════════════════════════════════════════════════
 // PINNED SCROLL-DRIVEN STORYTELLING PRESENTATION
